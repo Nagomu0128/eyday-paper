@@ -2,6 +2,7 @@ import { IngestPaper } from "../../application/ingestion/ingest-paper";
 import { ProcessPaper } from "../../application/ingestion/process-paper";
 import { AnswerQuestion } from "../../application/qa/answer-question";
 import { ExplainSelection } from "../../application/reading/explain-selection";
+import { GenerateSuggestions } from "../../application/suggestion/generate-suggestions";
 import { SummarizePaper } from "../../application/summary/summarize-paper";
 import { createDb } from "../../db/client";
 import type { ProcessJob } from "../../domain/ingestion/ports";
@@ -25,9 +26,18 @@ import {
   DrizzlePaperRepository,
   DrizzleTagRepository,
 } from "../../infrastructure/repositories/library";
+import { DrizzleProfileRepository } from "../../infrastructure/repositories/profile";
 import { DrizzleQaMessageRepository } from "../../infrastructure/repositories/qa";
+import { DrizzleSuggestionRepository } from "../../infrastructure/repositories/suggestion";
 import { VectorizeIndexAdapter } from "../../infrastructure/search/vectorize-index";
 import { R2ObjectStorage } from "../../infrastructure/storage/r2-object-storage";
+import { LlmSuggestionRanker } from "../../infrastructure/suggestion/llm-ranker";
+import {
+  ArxivRecentSource,
+  CompositeSuggestionSource,
+  OpenAlexSource,
+  S2RecommendationsSource,
+} from "../../infrastructure/suggestion/sources";
 import { LlmSummarizer } from "../../infrastructure/summary/llm-summarizer";
 
 const FLASH_LITE = "gemini-2.5-flash-lite";
@@ -124,3 +134,21 @@ export const buildSummarizePaper = (env: Env): SummarizePaper =>
     storage: new R2ObjectStorage(env.BUCKET),
     summarizer: new LlmSummarizer(geminiGateway(env), FLASH),
   });
+
+export const buildGenerateSuggestions = (env: Env): GenerateSuggestions => {
+  const db = createDb(env.DB);
+  return new GenerateSuggestions({
+    papers: new DrizzlePaperRepository(db),
+    profiles: new DrizzleProfileRepository(db),
+    source: new CompositeSuggestionSource([
+      new S2RecommendationsSource(env.S2_API_KEY || undefined),
+      new ArxivRecentSource(),
+      new OpenAlexSource(),
+    ]),
+    ranker: new LlmSuggestionRanker(openaiGateway(env), GPT_MID),
+    suggestions: new DrizzleSuggestionRepository(db),
+  });
+};
+
+export const buildSuggestionRepo = (env: Env): DrizzleSuggestionRepository =>
+  new DrizzleSuggestionRepository(createDb(env.DB));

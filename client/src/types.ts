@@ -52,3 +52,16 @@ export interface Summary {
   tldr: string;
   sections: { heading: string | null; summary: string }[];
 }
+
+export interface Suggestion {
+  id: string;
+  externalId: string;
+  source: "s2" | "arxiv" | "openalex";
+  title: string;
+  authors: string[];
+  year: number | null;
+  url: string | null;
+  kind: "classic" | "recent";
+  score: number;
+  reason: string | null;
+}

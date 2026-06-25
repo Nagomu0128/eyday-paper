@@ -7,9 +7,11 @@ import { AppError, httpStatusForKind } from "../../shared/errors";
 import {
   buildAnswerQuestion,
   buildExplainSelection,
+  buildGenerateSuggestions,
   buildIngestPaper,
   buildLibrary,
   buildQaHistory,
+  buildSuggestionRepo,
   buildSummarizePaper,
 } from "./composition";
 import { type AuthEnv, requireAuth, withAuth } from "./middleware/auth";
@@ -149,6 +151,27 @@ const routes = app
       lang,
     });
     return c.json(summary);
+  })
+  // Suggestions (cached by the daily batch), grouped classic/recent.
+  .get("/api/suggestions", requireAuth, async (c) => {
+    const all = await buildSuggestionRepo(c.env).list(c.get("ctx").userId);
+    return c.json({
+      classic: all.filter((s) => s.kind === "classic"),
+      recent: all.filter((s) => s.kind === "recent"),
+    });
+  })
+  // Manually refresh suggestions now.
+  .post("/api/suggestions/refresh", requireAuth, async (c) => {
+    const count = await buildGenerateSuggestions(c.env).execute(c.get("ctx").userId);
+    return c.json({ count });
+  })
+  .post("/api/suggestions/:id/import", requireAuth, async (c) => {
+    await buildSuggestionRepo(c.env).markImported(c.get("ctx").userId, c.req.param("id"));
+    return c.json({ ok: true });
+  })
+  .post("/api/suggestions/:id/dismiss", requireAuth, async (c) => {
+    await buildSuggestionRepo(c.env).dismiss(c.get("ctx").userId, c.req.param("id"));
+    return c.json({ ok: true });
   });
 
 export type AppType = typeof routes;

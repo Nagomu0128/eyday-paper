@@ -5,6 +5,7 @@ import type {
   Folder,
   OutputLang,
   Paper,
+  Suggestion,
   Summary,
   Tag,
 } from "../types";
@@ -94,5 +95,26 @@ export const api = {
 
   async getSummary(id: string, lang: OutputLang): Promise<Summary> {
     return asJson(await fetch(`/api/papers/${id}/summary?lang=${lang}`));
+  },
+
+  async getSuggestions(): Promise<{ classic: Suggestion[]; recent: Suggestion[] }> {
+    return asJson(await fetch("/api/suggestions"));
+  },
+
+  async refreshSuggestions(): Promise<{ count: number }> {
+    return asJson(await fetch("/api/suggestions/refresh", { method: "POST" }));
+  },
+
+  async dismissSuggestion(id: string): Promise<void> {
+    await fetch(`/api/suggestions/${id}/dismiss`, { method: "POST" });
+  },
+
+  async importSuggestion(id: string, input: string): Promise<void> {
+    await fetch("/api/papers", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ input }),
+    });
+    await fetch(`/api/suggestions/${id}/import`, { method: "POST" });
   },
 };
