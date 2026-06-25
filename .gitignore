@@ -14,9 +14,8 @@ worker-configuration.d.ts
 .dev.vars.*
 *.local
 
-# terraform
+# terraform (commit .terraform.lock.hcl for reproducible provider versions)
 infra/.terraform/
-infra/.terraform.lock.hcl
 infra/*.tfstate
 infra/*.tfstate.*
 infra/.terraform.tfstate.lock.info

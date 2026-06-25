@@ -21,8 +21,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 migrations apply eyday_paper --local",
-    "db:migrate:remote": "wrangler d1 migrations apply eyday_paper --remote",
+    "db:migrate:local": "wrangler d1 migrations apply eyday-paper --local",
+    "db:migrate:remote": "wrangler d1 migrations apply eyday-paper --remote",
     "check": "npm run cf-typegen && npm run lint && npm run typecheck && npm run depcruise && npm run test"
   },
   "dependencies": {
