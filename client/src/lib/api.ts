@@ -1,4 +1,13 @@
-import type { Answer, Explanation, ExtractedDoc, Folder, OutputLang, Paper, Tag } from "../types";
+import type {
+  Answer,
+  Explanation,
+  ExtractedDoc,
+  Folder,
+  OutputLang,
+  Paper,
+  Summary,
+  Tag,
+} from "../types";
 
 export class ApiError extends Error {
   constructor(public readonly status: number) {
@@ -81,5 +90,9 @@ export const api = {
         body: JSON.stringify({ question, lang }),
       }),
     );
+  },
+
+  async getSummary(id: string, lang: OutputLang): Promise<Summary> {
+    return asJson(await fetch(`/api/papers/${id}/summary?lang=${lang}`));
   },
 };

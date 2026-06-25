@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
 import type { Explanation, ExtractedDoc, Folder, OutputLang, Paper, Tag } from "../types";
 import { QaPanel } from "./QaPanel";
+import { SummaryBox } from "./SummaryBox";
 
 interface Detail {
   paper: Paper;
@@ -156,6 +157,7 @@ export function Reader({ paperId, onBack }: { paperId: string; onBack: () => voi
           onMouseUp={onMouseUp}
           className="space-y-6 font-serif text-[1.05rem] leading-8 text-stone-800"
         >
+          <SummaryBox paperId={paperId} lang={lang} />
           {doc === undefined && <p className="text-stone-400">読み込み中…</p>}
           {doc === null && (
             <p className="text-stone-400">本文を処理中です。原文 PDF は上のボタンから開けます。</p>

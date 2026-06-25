@@ -10,6 +10,7 @@ import {
   buildIngestPaper,
   buildLibrary,
   buildQaHistory,
+  buildSummarizePaper,
 } from "./composition";
 import { type AuthEnv, requireAuth, withAuth } from "./middleware/auth";
 
@@ -138,6 +139,16 @@ const routes = app
       c.req.param("id"),
     );
     return c.json({ messages });
+  })
+  // TL;DR + section summaries (cached per lang). ?lang=ja|en.
+  .get("/api/papers/:id/summary", requireAuth, async (c) => {
+    const lang = c.req.query("lang") === "en" ? "en" : "ja";
+    const summary = await buildSummarizePaper(c.env).execute({
+      userId: c.get("ctx").userId,
+      paperId: c.req.param("id"),
+      lang,
+    });
+    return c.json(summary);
   });
 
 export type AppType = typeof routes;

@@ -47,3 +47,8 @@ export interface Answer {
   grounded: boolean;
   citations: { section: string | null; page: number | null }[];
 }
+
+export interface Summary {
+  tldr: string;
+  sections: { heading: string | null; summary: string }[];
+}

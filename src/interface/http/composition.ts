@@ -2,6 +2,7 @@ import { IngestPaper } from "../../application/ingestion/ingest-paper";
 import { ProcessPaper } from "../../application/ingestion/process-paper";
 import { AnswerQuestion } from "../../application/qa/answer-question";
 import { ExplainSelection } from "../../application/reading/explain-selection";
+import { SummarizePaper } from "../../application/summary/summarize-paper";
 import { createDb } from "../../db/client";
 import type { ProcessJob } from "../../domain/ingestion/ports";
 import type { FolderRepository, PaperRepository, TagRepository } from "../../domain/library/types";
@@ -27,8 +28,10 @@ import {
 import { DrizzleQaMessageRepository } from "../../infrastructure/repositories/qa";
 import { VectorizeIndexAdapter } from "../../infrastructure/search/vectorize-index";
 import { R2ObjectStorage } from "../../infrastructure/storage/r2-object-storage";
+import { LlmSummarizer } from "../../infrastructure/summary/llm-summarizer";
 
 const FLASH_LITE = "gemini-2.5-flash-lite";
+const FLASH = "gemini-2.5-flash";
 const GPT_MINI = "gpt-5.4-mini";
 const GPT_MID = "gpt-5.4";
 
@@ -114,3 +117,10 @@ export const buildAnswerQuestion = (env: Env): AnswerQuestion => {
 
 export const buildQaHistory = (env: Env): DrizzleQaMessageRepository =>
   new DrizzleQaMessageRepository(createDb(env.DB));
+
+export const buildSummarizePaper = (env: Env): SummarizePaper =>
+  new SummarizePaper({
+    papers: new DrizzlePaperRepository(createDb(env.DB)),
+    storage: new R2ObjectStorage(env.BUCKET),
+    summarizer: new LlmSummarizer(geminiGateway(env), FLASH),
+  });
