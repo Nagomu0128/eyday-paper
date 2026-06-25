@@ -86,6 +86,7 @@ export interface Chunk {
   section: string | null;
   page: number | null;
   vectorId: string | null;
+  text: string;
   charLen: number;
 }
 
@@ -97,6 +98,7 @@ export interface NewChunk {
   section?: string | null;
   page?: number | null;
   vectorId?: string | null;
+  text?: string;
   charLen?: number;
 }
 
@@ -149,5 +151,6 @@ export interface TagRepository {
 export interface ChunkRepository {
   bulkCreate(chunks: NewChunk[]): Promise<void>;
   listByPaper(userId: string, paperId: string): Promise<Chunk[]>;
+  findByIds(userId: string, ids: string[]): Promise<Chunk[]>;
   deleteByPaper(userId: string, paperId: string): Promise<void>;
 }

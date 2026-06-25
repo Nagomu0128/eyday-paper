@@ -1,0 +1,1 @@
+ALTER TABLE `chunk` ADD `text` text DEFAULT '' NOT NULL;

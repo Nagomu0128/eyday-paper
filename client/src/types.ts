@@ -41,3 +41,9 @@ export interface Explanation {
   explanation: string;
   source: { section: string | null; page: number | null };
 }
+
+export interface Answer {
+  answer: string;
+  grounded: boolean;
+  citations: { section: string | null; page: number | null }[];
+}
