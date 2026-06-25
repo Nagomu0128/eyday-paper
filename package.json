@@ -1,0 +1,51 @@
+{
+  "name": "eyday-paper",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "wrangler deploy",
+    "cf-typegen": "wrangler types",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome check --error-on-warnings .",
+    "lint:fix": "biome check --write .",
+    "typecheck": "tsc --noEmit -p tsconfig.worker.json && tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json",
+    "depcruise": "depcruise src --config .dependency-cruiser.cjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply eyday_paper --local",
+    "db:migrate:remote": "wrangler d1 migrations apply eyday_paper --remote",
+    "check": "npm run cf-typegen && npm run lint && npm run typecheck && npm run depcruise && npm run test"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "^0.8.0",
+    "hono": "^4.12.27",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.1",
+    "@cloudflare/vite-plugin": "^1.42.3",
+    "@cloudflare/vitest-pool-workers": "^0.16.20",
+    "@tailwindcss/vite": "^4.3.1",
+    "@types/node": "^26.0.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "dependency-cruiser": "^17.4.3",
+    "tailwindcss": "^4.3.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.0",
+    "vitest": "^4.1.9",
+    "wrangler": "^4.105.0"
+  }
+}
