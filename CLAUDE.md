@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+> [!CAUTION]
+> **TOP PRIORITY — STOP AT 97% USAGE.** When the usage limit reaches 97%, halt work
+> immediately. Always keep some usage in reserve; never run the usage limit to 100%.
+
 Guidance for AI agents working in this repository. Read this before making changes.
 The authoritative product/architecture reference is [`specs/design doc.md`](specs/design%20doc.md);
 this file captures **how we work** and the conventions that follow from it.
