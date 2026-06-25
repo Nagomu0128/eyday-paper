@@ -3,12 +3,22 @@ import type {
   Explanation,
   ExtractedDoc,
   Folder,
+  Note,
   OutputLang,
   Paper,
+  PaperStatus,
+  Profile,
   Suggestion,
   Summary,
   Tag,
 } from "../types";
+
+export interface ProfilePatch {
+  interests?: string[];
+  level?: string | null;
+  readability?: string | null;
+  outputLang?: OutputLang;
+}
 
 export class ApiError extends Error {
   constructor(public readonly status: number) {
@@ -116,5 +126,49 @@ export const api = {
       body: JSON.stringify({ input }),
     });
     await fetch(`/api/suggestions/${id}/import`, { method: "POST" });
+  },
+
+  async getProfile(): Promise<Profile | null> {
+    const d = await asJson<{ profile: Profile | null }>(await fetch("/api/profile"));
+    return d.profile;
+  },
+
+  async updateProfile(patch: ProfilePatch): Promise<Profile> {
+    const d = await asJson<{ profile: Profile }>(
+      await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(patch),
+      }),
+    );
+    return d.profile;
+  },
+
+  async setStatus(id: string, status: PaperStatus): Promise<void> {
+    await fetch(`/api/papers/${id}/status`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  async getNotes(id: string): Promise<Note[]> {
+    return (await asJson<{ notes: Note[] }>(await fetch(`/api/papers/${id}/notes`))).notes;
+  },
+
+  async addNote(id: string, body: string): Promise<Note> {
+    return (
+      await asJson<{ note: Note }>(
+        await fetch(`/api/papers/${id}/notes`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ kind: "note", body }),
+        }),
+      )
+    ).note;
+  },
+
+  async deleteNote(noteId: string): Promise<void> {
+    await fetch(`/api/notes/${noteId}`, { method: "DELETE" });
   },
 };

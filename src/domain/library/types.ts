@@ -112,6 +112,21 @@ export interface Note {
   createdAt: Date;
 }
 
+export interface NewNote {
+  id: string;
+  userId: string;
+  paperId: string;
+  kind: NoteKind;
+  rangeJson?: string | null;
+  body?: string | null;
+}
+
+export interface NoteRepository {
+  create(note: NewNote): Promise<Note>;
+  listByPaper(userId: string, paperId: string): Promise<Note[]>;
+  delete(userId: string, id: string): Promise<void>;
+}
+
 export interface PaperRepository {
   create(input: NewPaper): Promise<Paper>;
   findById(userId: string, id: string): Promise<Paper | null>;

@@ -1,12 +1,20 @@
 import { useEffect, useState } from "react";
 import { Library } from "./components/Library";
 import { Reader } from "./components/Reader";
+import { Settings } from "./components/Settings";
 import { SignIn } from "./components/SignIn";
 import { Suggestions } from "./components/Suggestions";
 import { api } from "./lib/api";
 
-type View = { name: "library" } | { name: "suggestions" } | { name: "reader"; paperId: string };
+type View =
+  | { name: "library" }
+  | { name: "suggestions" }
+  | { name: "settings" }
+  | { name: "reader"; paperId: string };
 type Auth = "loading" | "in" | "out";
+
+const navClass = (active: boolean) =>
+  active ? "font-medium text-stone-900" : "text-stone-500 hover:text-stone-800";
 
 export default function App() {
   const [auth, setAuth] = useState<Auth>("loading");
@@ -39,24 +47,23 @@ export default function App() {
             <button
               type="button"
               onClick={() => setView({ name: "library" })}
-              className={
-                view.name === "library"
-                  ? "font-medium text-stone-900"
-                  : "text-stone-500 hover:text-stone-800"
-              }
+              className={navClass(view.name === "library")}
             >
               ライブラリ
             </button>
             <button
               type="button"
               onClick={() => setView({ name: "suggestions" })}
-              className={
-                view.name === "suggestions"
-                  ? "font-medium text-stone-900"
-                  : "text-stone-500 hover:text-stone-800"
-              }
+              className={navClass(view.name === "suggestions")}
             >
               提案
+            </button>
+            <button
+              type="button"
+              onClick={() => setView({ name: "settings" })}
+              className={navClass(view.name === "settings")}
+            >
+              設定
             </button>
             <button
               type="button"
@@ -73,6 +80,7 @@ export default function App() {
         <Library onOpen={(paperId) => setView({ name: "reader", paperId })} />
       )}
       {view.name === "suggestions" && <Suggestions />}
+      {view.name === "settings" && <Settings />}
       {view.name === "reader" && (
         <Reader paperId={view.paperId} onBack={() => setView({ name: "library" })} />
       )}

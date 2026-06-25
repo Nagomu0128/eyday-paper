@@ -53,6 +53,23 @@ export interface Summary {
   sections: { heading: string | null; summary: string }[];
 }
 
+export interface Profile {
+  userId: string;
+  interests: string[];
+  level: string | null;
+  readability: string | null;
+  outputLang: OutputLang;
+}
+
+export interface Note {
+  id: string;
+  paperId: string;
+  kind: "note" | "highlight";
+  body: string | null;
+  rangeJson: string | null;
+  createdAt: string;
+}
+
 export interface Suggestion {
   id: string;
   externalId: string;

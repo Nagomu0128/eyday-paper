@@ -1,8 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
-import type { Explanation, ExtractedDoc, Folder, OutputLang, Paper, Tag } from "../types";
+import type {
+  Explanation,
+  ExtractedDoc,
+  Folder,
+  OutputLang,
+  Paper,
+  PaperStatus,
+  Tag,
+} from "../types";
+import { NotesPanel } from "./NotesPanel";
 import { QaPanel } from "./QaPanel";
 import { SummaryBox } from "./SummaryBox";
+
+const STATUSES: { value: PaperStatus; label: string }[] = [
+  { value: "unread", label: "未読" },
+  { value: "reading", label: "読書中" },
+  { value: "read", label: "読了" },
+];
 
 interface Detail {
   paper: Paper;
@@ -95,6 +110,11 @@ export function Reader({ paperId, onBack }: { paperId: string; onBack: () => voi
 
   const paper = detail?.paper;
 
+  const changeStatus = async (status: PaperStatus) => {
+    await api.setStatus(paperId, status);
+    setDetail((d) => (d ? { ...d, paper: { ...d.paper, status } } : d));
+  };
+
   return (
     <main className="mx-auto max-w-3xl px-5 py-8">
       <div className="mb-6 flex items-center justify-between gap-4">
@@ -138,6 +158,22 @@ export function Reader({ paperId, onBack }: { paperId: string; onBack: () => voi
               ))}
             </div>
           )}
+          <div className="mt-4 flex w-fit overflow-hidden rounded-lg border border-stone-300 font-sans text-sm">
+            {STATUSES.map((s) => (
+              <button
+                type="button"
+                key={s.value}
+                onClick={() => changeStatus(s.value)}
+                className={
+                  s.value === paper.status
+                    ? "bg-stone-900 px-3 py-1.5 text-white"
+                    : "bg-white px-3 py-1.5 text-stone-600 hover:bg-stone-100"
+                }
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
         </header>
       )}
 
@@ -177,6 +213,7 @@ export function Reader({ paperId, onBack }: { paperId: string; onBack: () => voi
             </section>
           ))}
           <QaPanel paperId={paperId} lang={lang} />
+          <NotesPanel paperId={paperId} />
         </article>
       )}
 

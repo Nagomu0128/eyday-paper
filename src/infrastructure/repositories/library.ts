@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import type { Database } from "../../db/client";
-import { chunk, folder, paper, paperTag, tag } from "../../db/schema";
+import { chunk, folder, note, paper, paperTag, tag } from "../../db/schema";
 import type {
   Chunk,
   ChunkRepository,
@@ -8,7 +8,10 @@ import type {
   FolderRepository,
   ListPapersOptions,
   NewChunk,
+  NewNote,
   NewPaper,
+  Note,
+  NoteRepository,
   Paper,
   PaperPatch,
   PaperRepository,
@@ -299,5 +302,40 @@ export class DrizzleChunkRepository implements ChunkRepository {
 
   async deleteByPaper(userId: string, paperId: string): Promise<void> {
     await this.db.delete(chunk).where(and(eq(chunk.userId, userId), eq(chunk.paperId, paperId)));
+  }
+}
+
+// ---------- Note ----------
+
+export class DrizzleNoteRepository implements NoteRepository {
+  constructor(private readonly db: Database) {}
+
+  async create(input: NewNote): Promise<Note> {
+    const rows = await this.db
+      .insert(note)
+      .values({
+        id: input.id,
+        userId: input.userId,
+        paperId: input.paperId,
+        kind: input.kind,
+        rangeJson: input.rangeJson ?? null,
+        body: input.body ?? null,
+      })
+      .returning();
+    const row = rows[0];
+    if (!row) throw new AppError("internal", "note insert returned no row");
+    return row;
+  }
+
+  async listByPaper(userId: string, paperId: string): Promise<Note[]> {
+    return this.db
+      .select()
+      .from(note)
+      .where(and(eq(note.userId, userId), eq(note.paperId, paperId)))
+      .orderBy(desc(note.createdAt));
+  }
+
+  async delete(userId: string, id: string): Promise<void> {
+    await this.db.delete(note).where(and(eq(note.userId, userId), eq(note.id, id)));
   }
 }

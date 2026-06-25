@@ -58,7 +58,18 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
       </form>
       {error && <p className="mt-3 text-sm text-rose-600">{error}</p>}
 
-      <div className="mt-8 grid gap-3">
+      {papers.length > 0 && (
+        <div className="mt-6 flex gap-4 text-sm text-stone-500">
+          <span>
+            全 <span className="font-semibold text-stone-800">{papers.length}</span> 件
+          </span>
+          <span>未読 {papers.filter((p) => p.status === "unread").length}</span>
+          <span>読書中 {papers.filter((p) => p.status === "reading").length}</span>
+          <span>読了 {papers.filter((p) => p.status === "read").length}</span>
+        </div>
+      )}
+
+      <div className="mt-6 grid gap-3">
         {papers.length === 0 && (
           <p className="py-16 text-center text-stone-400">
             まだ論文がありません。上のバーから取り込んでください。
