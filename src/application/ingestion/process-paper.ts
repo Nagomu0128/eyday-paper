@@ -104,6 +104,7 @@ export class ProcessPaper {
         idx: tc.idx,
         section: tc.section,
         vectorId: id,
+        text: tc.text,
         charLen: tc.charLen,
       };
     });

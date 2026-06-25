@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
 import type { Explanation, ExtractedDoc, Folder, OutputLang, Paper, Tag } from "../types";
+import { QaPanel } from "./QaPanel";
 
 interface Detail {
   paper: Paper;
@@ -173,6 +174,7 @@ export function Reader({ paperId, onBack }: { paperId: string; onBack: () => voi
               ))}
             </section>
           ))}
+          <QaPanel paperId={paperId} lang={lang} />
         </article>
       )}
 

@@ -1,4 +1,4 @@
-import type { Explanation, ExtractedDoc, Folder, OutputLang, Paper, Tag } from "../types";
+import type { Answer, Explanation, ExtractedDoc, Folder, OutputLang, Paper, Tag } from "../types";
 
 export class ApiError extends Error {
   constructor(public readonly status: number) {
@@ -69,6 +69,16 @@ export const api = {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
+      }),
+    );
+  },
+
+  async askQuestion(id: string, question: string, lang: OutputLang): Promise<Answer> {
+    return asJson(
+      await fetch(`/api/papers/${id}/qa`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ question, lang }),
       }),
     );
   },

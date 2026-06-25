@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import type { Database } from "../../db/client";
 import { chunk, folder, paper, paperTag, tag } from "../../db/schema";
 import type {
@@ -275,6 +275,7 @@ export class DrizzleChunkRepository implements ChunkRepository {
         section: c.section ?? null,
         page: c.page ?? null,
         vectorId: c.vectorId ?? null,
+        text: c.text ?? "",
         charLen: c.charLen ?? 0,
       })),
     );
@@ -286,6 +287,14 @@ export class DrizzleChunkRepository implements ChunkRepository {
       .from(chunk)
       .where(and(eq(chunk.userId, userId), eq(chunk.paperId, paperId)))
       .orderBy(asc(chunk.idx));
+  }
+
+  async findByIds(userId: string, ids: string[]): Promise<Chunk[]> {
+    if (ids.length === 0) return [];
+    return this.db
+      .select()
+      .from(chunk)
+      .where(and(eq(chunk.userId, userId), inArray(chunk.id, ids)));
   }
 
   async deleteByPaper(userId: string, paperId: string): Promise<void> {

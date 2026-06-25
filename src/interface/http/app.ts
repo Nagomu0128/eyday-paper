@@ -4,7 +4,13 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
 import { detectIngestInput } from "../../infrastructure/ingestion/input";
 import { AppError, httpStatusForKind } from "../../shared/errors";
-import { buildExplainSelection, buildIngestPaper, buildLibrary } from "./composition";
+import {
+  buildAnswerQuestion,
+  buildExplainSelection,
+  buildIngestPaper,
+  buildLibrary,
+  buildQaHistory,
+} from "./composition";
 import { type AuthEnv, requireAuth, withAuth } from "./middleware/auth";
 
 const explainSchema = z.object({
@@ -105,6 +111,33 @@ const routes = app
       lang: b.lang ?? "ja",
     });
     return c.json(result);
+  })
+  // RAG Q&A grounded in the paper's chunks (cited source spans).
+  .post(
+    "/api/papers/:id/qa",
+    requireAuth,
+    zValidator(
+      "json",
+      z.object({ question: z.string().min(1).max(2000), lang: z.enum(["ja", "en"]).optional() }),
+    ),
+    async (c) => {
+      const b = c.req.valid("json");
+      const result = await buildAnswerQuestion(c.env).execute({
+        userId: c.get("ctx").userId,
+        paperId: c.req.param("id"),
+        question: b.question,
+        lang: b.lang ?? "ja",
+      });
+      return c.json(result);
+    },
+  )
+  // Q&A history for a paper.
+  .get("/api/papers/:id/qa", requireAuth, async (c) => {
+    const messages = await buildQaHistory(c.env).listByPaper(
+      c.get("ctx").userId,
+      c.req.param("id"),
+    );
+    return c.json({ messages });
   });
 
 export type AppType = typeof routes;

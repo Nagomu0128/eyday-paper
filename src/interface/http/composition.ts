@@ -1,5 +1,6 @@
 import { IngestPaper } from "../../application/ingestion/ingest-paper";
 import { ProcessPaper } from "../../application/ingestion/process-paper";
+import { AnswerQuestion } from "../../application/qa/answer-question";
 import { ExplainSelection } from "../../application/reading/explain-selection";
 import { createDb } from "../../db/client";
 import type { ProcessJob } from "../../domain/ingestion/ports";
@@ -8,12 +9,14 @@ import type { ObjectStorage } from "../../domain/storage/object-storage";
 import { AiGatewayLlmClient, buildGatewayBaseUrl } from "../../infrastructure/ai/ai-gateway";
 import type { LlmClient } from "../../infrastructure/ai/llm-client";
 import { WorkersAiEmbedder } from "../../infrastructure/ai/workers-ai-embedder";
+import { WorkersAiReranker } from "../../infrastructure/ai/workers-ai-reranker";
 import { LlmFolderAssigner } from "../../infrastructure/ingestion/llm-folder-assigner";
 import { LlmTagger } from "../../infrastructure/ingestion/llm-tagger";
 import { HttpMetadataResolver } from "../../infrastructure/ingestion/metadata-resolver";
 import { CloudflareIngestionQueue } from "../../infrastructure/ingestion/queue";
 import { HttpSourceFetcher } from "../../infrastructure/ingestion/source-fetcher";
 import { CompositeTextExtractor } from "../../infrastructure/ingestion/text-extractor";
+import { LlmAnswerGenerator } from "../../infrastructure/qa/llm-answer-generator";
 import { LlmExplainer } from "../../infrastructure/reading/llm-explainer";
 import {
   DrizzleChunkRepository,
@@ -21,11 +24,13 @@ import {
   DrizzlePaperRepository,
   DrizzleTagRepository,
 } from "../../infrastructure/repositories/library";
+import { DrizzleQaMessageRepository } from "../../infrastructure/repositories/qa";
 import { VectorizeIndexAdapter } from "../../infrastructure/search/vectorize-index";
 import { R2ObjectStorage } from "../../infrastructure/storage/r2-object-storage";
 
 const FLASH_LITE = "gemini-2.5-flash-lite";
 const GPT_MINI = "gpt-5.4-mini";
+const GPT_MID = "gpt-5.4";
 
 const geminiGateway = (env: Env): LlmClient =>
   new AiGatewayLlmClient({
@@ -93,3 +98,19 @@ export const buildLibrary = (env: Env): LibraryDeps => {
     storage: new R2ObjectStorage(env.BUCKET),
   };
 };
+
+export const buildAnswerQuestion = (env: Env): AnswerQuestion => {
+  const db = createDb(env.DB);
+  return new AnswerQuestion({
+    papers: new DrizzlePaperRepository(db),
+    chunks: new DrizzleChunkRepository(db),
+    embedder: new WorkersAiEmbedder(env.AI),
+    vectorIndex: new VectorizeIndexAdapter(env.VECTORIZE),
+    reranker: new WorkersAiReranker(env.AI),
+    generator: new LlmAnswerGenerator(openaiGateway(env), GPT_MID),
+    history: new DrizzleQaMessageRepository(db),
+  });
+};
+
+export const buildQaHistory = (env: Env): DrizzleQaMessageRepository =>
+  new DrizzleQaMessageRepository(createDb(env.DB));

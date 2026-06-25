@@ -123,6 +123,8 @@ export const chunk = sqliteTable(
     section: text("section"),
     page: integer("page"),
     vectorId: text("vector_id"),
+    // Chunk text kept in D1 for reranking/answer grounding (and future FTS).
+    text: text("text").notNull().default(""),
     charLen: integer("char_len").notNull().default(0),
   },
   (t) => [
