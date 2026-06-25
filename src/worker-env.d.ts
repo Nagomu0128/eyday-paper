@@ -11,4 +11,6 @@ interface Env {
   AI_GATEWAY_NAME: string;
   GEMINI_API_KEY: string;
   OPENAI_API_KEY: string;
+  // Semantic Scholar API key (optional — empty falls back to the public rate).
+  S2_API_KEY: string;
 }

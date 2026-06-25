@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { Library } from "./components/Library";
 import { Reader } from "./components/Reader";
 import { SignIn } from "./components/SignIn";
+import { Suggestions } from "./components/Suggestions";
 import { api } from "./lib/api";
 
-type View = { name: "library" } | { name: "reader"; paperId: string };
+type View = { name: "library" } | { name: "suggestions" } | { name: "reader"; paperId: string };
 type Auth = "loading" | "in" | "out";
 
 export default function App() {
@@ -34,19 +35,45 @@ export default function App() {
           >
             eyday<span className="text-amber-700">-paper</span>
           </button>
-          <button
-            type="button"
-            onClick={() => api.signOut()}
-            className="text-sm text-stone-500 hover:text-stone-800"
-          >
-            Sign out
-          </button>
+          <nav className="flex items-center gap-4 text-sm">
+            <button
+              type="button"
+              onClick={() => setView({ name: "library" })}
+              className={
+                view.name === "library"
+                  ? "font-medium text-stone-900"
+                  : "text-stone-500 hover:text-stone-800"
+              }
+            >
+              ライブラリ
+            </button>
+            <button
+              type="button"
+              onClick={() => setView({ name: "suggestions" })}
+              className={
+                view.name === "suggestions"
+                  ? "font-medium text-stone-900"
+                  : "text-stone-500 hover:text-stone-800"
+              }
+            >
+              提案
+            </button>
+            <button
+              type="button"
+              onClick={() => api.signOut()}
+              className="text-stone-400 hover:text-stone-700"
+            >
+              Sign out
+            </button>
+          </nav>
         </div>
       </header>
 
-      {view.name === "library" ? (
+      {view.name === "library" && (
         <Library onOpen={(paperId) => setView({ name: "reader", paperId })} />
-      ) : (
+      )}
+      {view.name === "suggestions" && <Suggestions />}
+      {view.name === "reader" && (
         <Reader paperId={view.paperId} onBack={() => setView({ name: "library" })} />
       )}
     </div>
