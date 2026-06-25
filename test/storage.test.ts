@@ -1,6 +1,6 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import { r2Keys } from "../src/infrastructure/storage/keys";
+import { r2Keys } from "../src/domain/storage/keys";
 import { R2ObjectStorage } from "../src/infrastructure/storage/r2-object-storage";
 
 describe("R2ObjectStorage", () => {
