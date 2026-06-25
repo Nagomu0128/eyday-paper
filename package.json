@@ -27,6 +27,8 @@
   },
   "dependencies": {
     "@hono/zod-validator": "^0.8.0",
+    "better-auth": "^1.6.20",
+    "drizzle-orm": "^0.45.2",
     "hono": "^4.12.27",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
@@ -42,6 +44,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "dependency-cruiser": "^17.4.3",
+    "drizzle-kit": "^0.31.10",
     "tailwindcss": "^4.3.1",
     "typescript": "^6.0.3",
     "vite": "^8.1.0",

@@ -1,15 +1,30 @@
-import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-pool-workers";
 import { defineConfig } from "vitest/config";
 
-// Integration tests run inside the real Workers runtime (Miniflare) via the pool
-// plugin, so D1/R2/KV bindings behave as in production. `remoteBindings: false`
-// keeps the run fully local — AI/Vectorize are remote-only services and are
-// mocked at the port level in tests, never called through the real binding.
-export default defineConfig({
-  plugins: [
-    cloudflareTest({
-      remoteBindings: false,
-      wrangler: { configPath: "./wrangler.jsonc" },
-    }),
-  ],
+// Integration tests run inside the real Workers runtime (Miniflare). D1 schema is
+// applied from the generated Drizzle migrations (TEST_MIGRATIONS + a setup file).
+// AI/Vectorize are remote-only and stay port-mocked (remoteBindings:false).
+// Auth secrets are mock values — fully local, never real credentials.
+export default defineConfig(async () => {
+  const migrations = await readD1Migrations("src/db/migrations");
+  return {
+    plugins: [
+      cloudflareTest({
+        remoteBindings: false,
+        wrangler: { configPath: "./wrangler.jsonc" },
+        miniflare: {
+          bindings: {
+            TEST_MIGRATIONS: migrations,
+            BETTER_AUTH_SECRET: "test-secret-test-secret-test-secret-0123",
+            BETTER_AUTH_URL: "https://eyday-paper.test",
+            GOOGLE_CLIENT_ID: "mock-google-client-id",
+            GOOGLE_CLIENT_SECRET: "mock-google-client-secret",
+          },
+        },
+      }),
+    ],
+    test: {
+      setupFiles: ["./test/apply-migrations.ts"],
+    },
+  };
 });
