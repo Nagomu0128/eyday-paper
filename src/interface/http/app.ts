@@ -4,14 +4,22 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
 import { detectIngestInput } from "../../infrastructure/ingestion/input";
 import { AppError, httpStatusForKind } from "../../shared/errors";
-import { buildIngestPaper } from "./composition";
+import { buildExplainSelection, buildIngestPaper, buildLibrary } from "./composition";
 import { type AuthEnv, requireAuth, withAuth } from "./middleware/auth";
+
+const explainSchema = z.object({
+  selectedText: z.string().min(1).max(4000),
+  context: z.string().max(8000).optional(),
+  section: z.string().max(200).optional(),
+  page: z.number().int().nonnegative().optional(),
+  lang: z.enum(["ja", "en"]).optional(),
+});
 
 /**
  * HTTP boundary. Routes are defined with method chaining so the inferred
  * `AppType` can drive an end-to-end-typed Hono RPC client. No business logic
- * lives here — handlers delegate to application use cases; domain errors are
- * mapped to HTTP status centrally.
+ * lives here — handlers delegate to application use cases; domain errors map to
+ * HTTP status centrally.
  */
 const app = new Hono<AuthEnv>();
 
@@ -26,10 +34,7 @@ app.onError((err, c) => {
   return c.json({ error: "internal" }, 500);
 });
 
-// Build Better Auth once per request for every API route.
 app.use("/api/*", withAuth);
-
-// Better Auth endpoints: sign-in/out, Google OAuth callback, session.
 app.on(["GET", "POST"], "/api/auth/*", (c) => c.get("auth").handler(c.req.raw));
 
 const routes = app
@@ -51,7 +56,56 @@ const routes = app
       const result = await buildIngestPaper(c.env).execute(c.get("ctx").userId, detected);
       return c.json(result, result.deduped ? 200 : 201);
     },
-  );
+  )
+  // List the user's library.
+  .get("/api/papers", requireAuth, async (c) => {
+    const list = await buildLibrary(c.env).papers.list(c.get("ctx").userId);
+    return c.json({ papers: list });
+  })
+  // Paper detail with tags + home folder.
+  .get("/api/papers/:id", requireAuth, async (c) => {
+    const { papers, tags, folders } = buildLibrary(c.env);
+    const userId = c.get("ctx").userId;
+    const id = c.req.param("id");
+    const paper = await papers.findById(userId, id);
+    if (!paper) throw new AppError("not_found", "paper not found");
+    const paperTags = await tags.listForPaper(userId, id);
+    const folder = paper.primaryFolderId
+      ? await folders.findById(userId, paper.primaryFolderId)
+      : null;
+    return c.json({ paper, tags: paperTags, folder });
+  })
+  // Structured reflow text (R2). 409 until processing has produced it.
+  .get("/api/papers/:id/text", requireAuth, async (c) => {
+    const { papers, storage } = buildLibrary(c.env);
+    const paper = await papers.findById(c.get("ctx").userId, c.req.param("id"));
+    if (!paper) throw new AppError("not_found", "paper not found");
+    const text = paper.textR2Key ? await storage.getText(paper.textR2Key) : null;
+    if (!text) throw new AppError("conflict", "text not ready");
+    return c.body(text, 200, { "content-type": "application/json" });
+  })
+  // Original PDF (the "understudy"), always one tap away.
+  .get("/api/papers/:id/pdf", requireAuth, async (c) => {
+    const { papers, storage } = buildLibrary(c.env);
+    const paper = await papers.findById(c.get("ctx").userId, c.req.param("id"));
+    const obj = paper?.pdfR2Key ? await storage.get(paper.pdfR2Key) : null;
+    if (!obj) throw new AppError("not_found", "pdf not found");
+    return c.body(obj.body, 200, { "content-type": obj.contentType ?? "application/pdf" });
+  })
+  // Explain-on-selection of a passage/figure/formula.
+  .post("/api/papers/:id/explain", requireAuth, zValidator("json", explainSchema), async (c) => {
+    const b = c.req.valid("json");
+    const result = await buildExplainSelection(c.env).execute({
+      userId: c.get("ctx").userId,
+      paperId: c.req.param("id"),
+      selectedText: b.selectedText,
+      context: b.context ?? null,
+      section: b.section ?? null,
+      page: b.page ?? null,
+      lang: b.lang ?? "ja",
+    });
+    return c.json(result);
+  });
 
 export type AppType = typeof routes;
 export { app };
