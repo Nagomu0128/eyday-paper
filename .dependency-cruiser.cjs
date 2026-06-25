@@ -52,6 +52,8 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: "node_modules" },
+    // Test files are not production dependencies; don't enforce layer rules on them.
+    exclude: { path: "\\.(test|spec)\\.ts$" },
     tsPreCompilationDeps: false,
     tsConfig: { fileName: "tsconfig.worker.json" },
     enhancedResolveOptions: {
