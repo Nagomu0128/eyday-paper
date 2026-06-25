@@ -1,0 +1,4 @@
+# Copy to terraform.tfvars (gitignored) and fill in. Never commit real values.
+account_id = "your-cloudflare-account-id"
+zone_id    = "zone-id-for-yoshidakazuya.com"
+# domain     = "eyday-paper.yoshidakazuya.com"  # default

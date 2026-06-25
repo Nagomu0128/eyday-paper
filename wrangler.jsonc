@@ -11,5 +11,55 @@
   },
   "observability": {
     "enabled": true
+  },
+  // Relational data (Better Auth tables + app tables). `database_id` is a
+  // placeholder for local dev; the real id comes from Terraform output and is
+  // injected at deploy time. Miniflare uses a local SQLite db regardless.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "eyday-paper",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "src/db/migrations"
+    }
+  ],
+  // PDFs, extracted structured text, figures. Egress-free; read repeatedly.
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "eyday-paper"
+    }
+  ],
+  // Cache for AI Gateway-adjacent reuse and cheap lookups.
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "00000000000000000000000000000000"
+    }
+  ],
+  // RAG vector search (dense + filter by userId/paperId). Used unconditionally
+  // (D1 brute-force only exists as a port-level fallback for resilience).
+  "vectorize": [
+    {
+      "binding": "VECTORIZE",
+      "index_name": "eyday-paper-chunks"
+    }
+  ],
+  // Workers AI: bge-m3 (embeddings, dense+sparse) and bge-reranker-base (rerank).
+  "ai": {
+    "binding": "AI"
+  },
+  // Async ingestion/embedding jobs. Consumer + queue() handler added in M4.
+  "queues": {
+    "producers": [
+      {
+        "binding": "INGEST_QUEUE",
+        "queue": "eyday-paper-ingest"
+      }
+    ]
+  },
+  // Daily suggestion batch (03:00 JST = 18:00 UTC). Caches results to D1.
+  "triggers": {
+    "crons": ["0 18 * * *"]
   }
 }
