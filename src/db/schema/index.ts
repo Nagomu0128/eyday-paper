@@ -1,3 +1,3 @@
-// Aggregated Drizzle schema. App tables (paper/folder/tag/chunk/…) are added in
-// later milestones; auth tables live here from M2.
+// Aggregated Drizzle schema: Better Auth tables + app tables (design doc §6).
+export * from "./app";
 export * from "./auth";
