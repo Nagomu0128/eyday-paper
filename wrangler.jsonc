@@ -49,12 +49,20 @@
   "ai": {
     "binding": "AI"
   },
-  // Async ingestion/embedding jobs. Consumer + queue() handler added in M4.
+  // Async ingestion/embedding jobs: producer (request path) + consumer (pipeline).
   "queues": {
     "producers": [
       {
         "binding": "INGEST_QUEUE",
         "queue": "eyday-paper-ingest"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "eyday-paper-ingest",
+        "max_batch_size": 5,
+        "max_batch_timeout": 30,
+        "max_retries": 3
       }
     ]
   },
