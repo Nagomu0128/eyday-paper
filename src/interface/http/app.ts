@@ -10,6 +10,8 @@ import {
   buildGenerateSuggestions,
   buildIngestPaper,
   buildLibrary,
+  buildNoteRepo,
+  buildProfileRepo,
   buildQaHistory,
   buildSuggestionRepo,
   buildSummarizePaper,
@@ -171,6 +173,97 @@ const routes = app
   })
   .post("/api/suggestions/:id/dismiss", requireAuth, async (c) => {
     await buildSuggestionRepo(c.env).dismiss(c.get("ctx").userId, c.req.param("id"));
+    return c.json({ ok: true });
+  })
+  // Profile (interests / level / readability / output language).
+  .get("/api/profile", requireAuth, async (c) => {
+    const profile = await buildProfileRepo(c.env).get(c.get("ctx").userId);
+    return c.json({ profile });
+  })
+  .put(
+    "/api/profile",
+    requireAuth,
+    zValidator(
+      "json",
+      z.object({
+        interests: z.array(z.string().min(1).max(60)).max(50).optional(),
+        level: z.string().max(60).nullish(),
+        readability: z.string().max(60).nullish(),
+        outputLang: z.enum(["ja", "en"]).optional(),
+      }),
+    ),
+    async (c) => {
+      const profile = await buildProfileRepo(c.env).upsert(
+        c.get("ctx").userId,
+        c.req.valid("json"),
+      );
+      return c.json({ profile });
+    },
+  )
+  // Folder tree (manual organization).
+  .get("/api/folders", requireAuth, async (c) => {
+    const folders = await buildLibrary(c.env).folders.list(c.get("ctx").userId);
+    return c.json({ folders });
+  })
+  // Reading status (manual).
+  .patch(
+    "/api/papers/:id/status",
+    requireAuth,
+    zValidator("json", z.object({ status: z.enum(["unread", "reading", "read"]) })),
+    async (c) => {
+      await buildLibrary(c.env).papers.setStatus(
+        c.get("ctx").userId,
+        c.req.param("id"),
+        c.req.valid("json").status,
+      );
+      return c.json({ ok: true });
+    },
+  )
+  // Manual move to a home folder (respected by automation thereafter).
+  .patch(
+    "/api/papers/:id/folder",
+    requireAuth,
+    zValidator("json", z.object({ folderId: z.string().nullable() })),
+    async (c) => {
+      await buildLibrary(c.env).papers.setPrimaryFolder(
+        c.get("ctx").userId,
+        c.req.param("id"),
+        c.req.valid("json").folderId,
+      );
+      return c.json({ ok: true });
+    },
+  )
+  // Notes / highlights.
+  .get("/api/papers/:id/notes", requireAuth, async (c) => {
+    const notes = await buildNoteRepo(c.env).listByPaper(c.get("ctx").userId, c.req.param("id"));
+    return c.json({ notes });
+  })
+  .post(
+    "/api/papers/:id/notes",
+    requireAuth,
+    zValidator(
+      "json",
+      z.object({
+        kind: z.enum(["note", "highlight"]).default("note"),
+        body: z.string().max(8000).optional(),
+        rangeJson: z.string().max(4000).optional(),
+      }),
+    ),
+    async (c) => {
+      const b = c.req.valid("json");
+      const note = await buildNoteRepo(c.env).create({
+        id: crypto.randomUUID(),
+        userId: c.get("ctx").userId,
+        paperId: c.req.param("id"),
+        kind: b.kind,
+        body: b.body ?? null,
+        rangeJson: b.rangeJson ?? null,
+      });
+      return c.json({ note }, 201);
+    },
+  )
+  .delete("/api/notes/:id", requireAuth, async (c) => {
+    await buildNoteRepo(c.env).delete(c.get("ctx").userId, c.req.param("id"));
     return c.json({ ok: true });
   });
 

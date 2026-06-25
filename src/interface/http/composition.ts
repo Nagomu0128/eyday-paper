@@ -23,6 +23,7 @@ import { LlmExplainer } from "../../infrastructure/reading/llm-explainer";
 import {
   DrizzleChunkRepository,
   DrizzleFolderRepository,
+  DrizzleNoteRepository,
   DrizzlePaperRepository,
   DrizzleTagRepository,
 } from "../../infrastructure/repositories/library";
@@ -152,3 +153,9 @@ export const buildGenerateSuggestions = (env: Env): GenerateSuggestions => {
 
 export const buildSuggestionRepo = (env: Env): DrizzleSuggestionRepository =>
   new DrizzleSuggestionRepository(createDb(env.DB));
+
+export const buildProfileRepo = (env: Env): DrizzleProfileRepository =>
+  new DrizzleProfileRepository(createDb(env.DB));
+
+export const buildNoteRepo = (env: Env): DrizzleNoteRepository =>
+  new DrizzleNoteRepository(createDb(env.DB));
