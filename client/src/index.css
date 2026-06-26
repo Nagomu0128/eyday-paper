@@ -45,9 +45,11 @@
 
   /* Typography */
   --font-sans:
-    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    "Noto Sans JP", "Inter", system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic",
+    Meiryo, "Segoe UI", Roboto, sans-serif;
   --font-serif:
-    "Newsreader", "Iowan Old Style", "Source Serif 4", Georgia, "Times New Roman", serif;
+    "Newsreader", "Iowan Old Style", "Source Serif 4", Georgia, "Yu Mincho", "Hiragino Mincho ProN",
+    serif;
 
   /* Elevation — warm-tinted */
   --shadow-card: 0 1px 2px rgba(33, 30, 26, 0.04), 0 2px 6px rgba(33, 30, 26, 0.05);

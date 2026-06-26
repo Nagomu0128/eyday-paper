@@ -1,4 +1,4 @@
-import { type ComponentType, type SVGProps, useState } from "react";
+import type { ComponentType, SVGProps } from "react";
 import { api } from "../lib/api";
 import { cx } from "../lib/cx";
 import {
@@ -34,17 +34,20 @@ export function Sidebar({
   active,
   onNavigate,
   me,
+  collapsed,
+  onToggleCollapsed,
   mobileOpen,
   onCloseMobile,
 }: {
   active: NavId;
   onNavigate: (id: NavId) => void;
   me: Me | null;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
   mobileOpen: boolean;
   onCloseMobile: () => void;
 }) {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
-  const [collapsed, setCollapsed] = useState(false);
   const { width, onPointerDown, nudge } = useResizable({
     storageKey: "eyday.sidebar.w",
     initial: 264,
@@ -83,27 +86,42 @@ export function Sidebar({
         )}
       >
         {/* Brand */}
-        <div className={cx("flex h-16 items-center gap-2.5 px-3", rail && "justify-center px-0")}>
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-[1.35rem] text-white shadow-card">
-            <BrandMark />
-          </span>
-          {!rail && (
+        <div className={cx("flex h-16 items-center gap-2.5 px-3", rail && "justify-center px-2")}>
+          {rail ? (
+            // Collapsed: the app icon itself reopens the sidebar (no separate button).
             <button
               type="button"
-              onClick={() => navigate("library")}
-              className="min-w-0 flex-1 text-left font-serif text-[1.15rem] font-semibold tracking-tight text-ink"
+              onClick={onToggleCollapsed}
+              title="サイドバーを開く (⌘/Ctrl+B)"
+              aria-label="サイドバーを開く"
+              className="group grid h-10 w-10 place-items-center rounded-xl bg-primary text-[1.4rem] text-white shadow-card transition hover:bg-primary-hover"
             >
-              eyday<span className="text-primary">·paper</span>
+              <span className="transition-transform group-hover:scale-110">
+                <BrandMark />
+              </span>
             </button>
+          ) : (
+            <>
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-[1.35rem] text-white shadow-card">
+                <BrandMark />
+              </span>
+              <button
+                type="button"
+                onClick={() => navigate("library")}
+                className="min-w-0 flex-1 text-left font-serif text-[1.15rem] font-semibold tracking-tight text-ink"
+              >
+                eyday<span className="text-primary">·paper</span>
+              </button>
+              <IconButton
+                label="サイドバーを畳む (⌘/Ctrl+B)"
+                size="sm"
+                onClick={() => (isDesktop ? onToggleCollapsed() : onCloseMobile())}
+                className="max-lg:hidden"
+              >
+                <IconPanelLeft />
+              </IconButton>
+            </>
           )}
-          <IconButton
-            label={collapsed ? "サイドバーを開く" : "サイドバーを畳む"}
-            size="sm"
-            onClick={() => (isDesktop ? setCollapsed((v) => !v) : onCloseMobile())}
-            className={cx("max-lg:hidden", rail && "hidden")}
-          >
-            <IconPanelLeft />
-          </IconButton>
         </div>
 
         {/* Nav */}
