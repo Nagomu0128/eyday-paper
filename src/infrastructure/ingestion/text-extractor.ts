@@ -53,18 +53,53 @@ export const htmlToDoc = (html: string, lang: string | null = null): ExtractedDo
 };
 
 /**
+ * Extract a born-digital PDF's text layer via unpdf (a Workers-compatible pdf.js
+ * build) — no OCR. Lazily imported so non-PDF requests don't pay for pdf.js.
+ * Scanned PDFs (no text layer) yield nothing and fall back to abstract-only.
+ */
+const extractPdfText = async (
+  bytes: ArrayBuffer,
+  lang: string | null,
+): Promise<ExtractedDoc | null> => {
+  try {
+    const { extractText, getDocumentProxy } = await import("unpdf");
+    const proxy = await getDocumentProxy(new Uint8Array(bytes));
+    const { text } = await extractText(proxy, { mergePages: true });
+    const paragraphs = text
+      .split(/\n\s*\n+/)
+      .map((p) =>
+        p
+          .replace(/[ \t]+/g, " ")
+          .replace(/\s*\n\s*/g, " ")
+          .trim(),
+      )
+      .filter((p) => p.length > 1);
+    if (paragraphs.length === 0) return null;
+    return { lang, sections: [{ heading: null, paragraphs }] };
+  } catch (err) {
+    console.warn("pdf text extraction failed", err);
+    return null;
+  }
+};
+
+/**
  * Staged extraction (§4.7): arXiv HTML (best — MathML, no OCR) when available,
- * otherwise an abstract-only fallback. Full PDF / multimodal-LLM extraction for
- * non-arXiv born-digital and scans is layered on once LLM keys are configured.
+ * else the PDF text layer (unpdf), else an abstract-only fallback. Multimodal-LLM
+ * extraction for formulas/tables and scans is layered on once LLM keys are wired.
  */
 export class CompositeTextExtractor implements TextExtractor {
-  async extract(paper: Paper, _pdf: ArrayBuffer | null): Promise<ExtractedDoc> {
+  async extract(paper: Paper, pdf: ArrayBuffer | null): Promise<ExtractedDoc> {
     if (paper.arxivId) {
       const html = await this.fetchArxivHtml(paper.arxivId);
       if (html) {
         const doc = htmlToDoc(html, paper.langDetected);
         if (doc.sections.some((s) => s.paragraphs.length > 0)) return doc;
       }
+    }
+    // Born-digital / uploaded PDF: extract the text layer (no OCR).
+    if (pdf) {
+      const doc = await extractPdfText(pdf, paper.langDetected);
+      if (doc) return doc;
     }
     return {
       lang: paper.langDetected,
