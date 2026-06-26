@@ -130,10 +130,9 @@ export const api = {
     return asJson(await fetch("/api/suggestions"));
   },
 
-  /** Kicks off the background refresh batch (202). Completion is observed by polling. */
-  async refreshSuggestions(): Promise<void> {
-    const res = await fetch("/api/suggestions/refresh", { method: "POST" });
-    if (!res.ok) throw new ApiError(res.status);
+  /** Generate + cache suggestions synchronously; returns how many were produced. */
+  async refreshSuggestions(): Promise<{ count: number }> {
+    return asJson(await fetch("/api/suggestions/refresh", { method: "POST" }));
   },
 
   async dismissSuggestion(id: string): Promise<void> {

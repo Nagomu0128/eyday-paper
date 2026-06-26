@@ -24,21 +24,6 @@ const setState = (patch: Partial<SuggestState>) => {
   emit();
 };
 
-const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-/** Identity of the current suggestion set; changes once a new batch is stored. */
-const signature = async (): Promise<string> => {
-  try {
-    const d = await api.getSuggestions();
-    return [...d.classic, ...d.recent]
-      .map((s) => s.id)
-      .sort()
-      .join(",");
-  } catch {
-    return "";
-  }
-};
-
 export const suggestionsStore = {
   subscribe(cb: () => void): () => void {
     listeners.add(cb);
@@ -50,22 +35,17 @@ export const suggestionsStore = {
     return state;
   },
   /**
-   * Start a background refresh (202) and poll until the stored batch changes.
-   * Lives in the store so loading + the favicon spinner persist across tab
-   * switches; resolves on completion or after a 60s safety timeout.
+   * Generate + cache suggestions in a single request (the backend runs the batch
+   * synchronously and returns the count — no client polling). Lives in the store
+   * so the loading state + favicon spinner persist while the user switches tabs;
+   * on completion the Suggestions view reloads via `finishedAt`.
    */
   async refresh(): Promise<void> {
     if (state.refreshing) return;
     setState({ refreshing: true, error: null });
     try {
-      const before = await signature();
-      await api.refreshSuggestions();
-      const start = Date.now();
-      while (Date.now() - start < 60_000) {
-        await delay(2500);
-        if ((await signature()) !== before) break;
-      }
-      setState({ refreshing: false, finishedAt: Date.now() });
+      const { count } = await api.refreshSuggestions();
+      setState({ refreshing: false, lastCount: count, finishedAt: Date.now() });
     } catch {
       setState({ refreshing: false, error: "提案の更新に失敗しました" });
     }

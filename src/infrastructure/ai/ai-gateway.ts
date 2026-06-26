@@ -18,19 +18,24 @@ export class AiGatewayLlmClient implements LlmClient {
   constructor(private readonly config: AiGatewayConfig) {}
 
   async complete(opts: LlmCompleteOptions): Promise<string> {
-    const res = await fetchWithRetry(`${this.config.baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${this.config.apiKey}`,
+    const res = await fetchWithRetry(
+      `${this.config.baseUrl}/chat/completions`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${this.config.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: opts.model,
+          messages: opts.messages,
+          temperature: opts.temperature ?? 0.2,
+          ...(opts.json ? { response_format: { type: "json_object" } } : {}),
+        }),
       },
-      body: JSON.stringify({
-        model: opts.model,
-        messages: opts.messages,
-        temperature: opts.temperature ?? 0.2,
-        ...(opts.json ? { response_format: { type: "json_object" } } : {}),
-      }),
-    });
+      // Don't multiply provider requests on a quota/rate 429; one transient-5xx retry.
+      { retries: 1, retryOn429: false, timeoutMs: 20_000 },
+    );
     if (!res.ok) {
       // Surface the provider/gateway reason (model not found, gateway missing,
       // auth/quota) to observability; keep the client-facing error generic.
