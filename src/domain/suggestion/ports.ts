@@ -15,11 +15,23 @@ export interface ExternalPaper {
   abstract: string | null;
 }
 
+/** Personalization signals used to seed candidate collection + ranking. */
+export interface SuggestionProfile {
+  interests: string[];
+  level: string | null;
+  domains?: string[];
+  organizations?: string[];
+  avoid?: string[];
+  goal?: string | null;
+}
+
 export interface SuggestionSource {
   collect(input: {
     interests: string[];
     seedArxivIds: string[];
     seedDois: string[];
+    domains?: string[];
+    organizations?: string[];
   }): Promise<ExternalPaper[]>;
 }
 
@@ -34,7 +46,7 @@ export interface RankedSuggestion {
 /** LLM ranks/justifies real candidates (facts stay in the data, not the model). */
 export interface SuggestionRanker {
   rank(input: {
-    profile: { interests: string[]; level: string | null };
+    profile: SuggestionProfile;
     candidates: ExternalPaper[];
   }): Promise<RankedSuggestion[]>;
 }

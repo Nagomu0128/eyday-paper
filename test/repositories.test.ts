@@ -107,13 +107,35 @@ describe("repositories force user_id scoping", () => {
     const profiles = new DrizzleProfileRepository(createDb(env.DB));
     const u = await seedUser();
 
-    const a = await profiles.upsert(u, { interests: ["nlp", "rl"], outputLang: "en" });
+    const a = await profiles.upsert(u, {
+      interests: ["nlp", "rl"],
+      domains: ["NLP"],
+      organizations: ["OpenAI"],
+      avoid: ["blockchain"],
+      goal: "Understand LLM training",
+      outputLang: "en",
+    });
     expect(a.interests).toEqual(["nlp", "rl"]);
+    expect(a.domains).toEqual(["NLP"]);
+    expect(a.organizations).toEqual(["OpenAI"]);
+    expect(a.avoid).toEqual(["blockchain"]);
+    expect(a.goal).toBe("Understand LLM training");
     expect(a.outputLang).toBe("en");
 
+    // A partial patch preserves untouched columns (including the new tag arrays).
     const b = await profiles.upsert(u, { level: "intermediate" });
     expect(b.interests).toEqual(["nlp", "rl"]);
+    expect(b.domains).toEqual(["NLP"]);
+    expect(b.organizations).toEqual(["OpenAI"]);
     expect(b.outputLang).toBe("en");
     expect(b.level).toBe("intermediate");
+
+    // A brand-new profile defaults the tag arrays to [] and goal to null.
+    const u2 = await seedUser();
+    const fresh = await profiles.upsert(u2, {});
+    expect(fresh.domains).toEqual([]);
+    expect(fresh.organizations).toEqual([]);
+    expect(fresh.avoid).toEqual([]);
+    expect(fresh.goal).toBeNull();
   });
 });

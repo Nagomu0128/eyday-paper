@@ -3,7 +3,21 @@ import { fetchWithRetry } from "../http/fetch-retry";
 
 const MAILTO = "eyday-paper@yoshidakazuya.com"; // OpenAlex/Crossref polite pool
 
-type CollectInput = { interests: string[]; seedArxivIds: string[]; seedDois: string[] };
+type CollectInput = {
+  interests: string[];
+  seedArxivIds: string[];
+  seedDois: string[];
+  domains?: string[];
+  organizations?: string[];
+};
+
+/** Merge the user's free-text tags (topics + fields + orgs) into search queries. */
+const searchQueries = (input: CollectInput, max: number): string[] => {
+  const all = [...input.interests, ...(input.domains ?? []), ...(input.organizations ?? [])]
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return [...new Set(all)].slice(0, max);
+};
 
 const tag = (s: string, t: string): string | null => {
   const m = s.match(new RegExp(`<${t}[^>]*>([\\s\\S]*?)</${t}>`, "i"));
@@ -28,7 +42,8 @@ const allNames = (s: string): string[] => {
 /** Recent papers per interest from the arXiv Atom API (sorted by submission date). */
 export class ArxivRecentSource implements SuggestionSource {
   async collect(input: CollectInput): Promise<ExternalPaper[]> {
-    const queries = input.interests.length > 0 ? input.interests.slice(0, 3) : ["machine learning"];
+    const qs = searchQueries(input, 4);
+    const queries = qs.length > 0 ? qs : ["machine learning"];
     const out: ExternalPaper[] = [];
     for (const q of queries) {
       try {
@@ -62,7 +77,7 @@ export class ArxivRecentSource implements SuggestionSource {
 /** Topical works from OpenAlex (polite pool). Comprehensive metadata. */
 export class OpenAlexSource implements SuggestionSource {
   async collect(input: CollectInput): Promise<ExternalPaper[]> {
-    const queries = input.interests.slice(0, 3);
+    const queries = searchQueries(input, 3);
     const out: ExternalPaper[] = [];
     for (const q of queries) {
       try {

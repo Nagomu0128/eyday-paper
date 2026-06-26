@@ -2,10 +2,14 @@ import { z } from "zod";
 import type {
   ExternalPaper,
   RankedSuggestion,
+  SuggestionProfile,
   SuggestionRanker,
 } from "../../domain/suggestion/ports";
 import { parseLlmJson } from "../ai/json";
 import type { LlmClient } from "../ai/llm-client";
+
+const line = (label: string, values: string[] | undefined): string =>
+  values && values.length > 0 ? `${label}: ${values.join(", ")}` : `${label}: (none)`;
 
 const schema = z.object({
   suggestions: z
@@ -29,7 +33,7 @@ export class LlmSuggestionRanker implements SuggestionRanker {
   ) {}
 
   async rank(input: {
-    profile: { interests: string[]; level: string | null };
+    profile: SuggestionProfile;
     candidates: ExternalPaper[];
   }): Promise<RankedSuggestion[]> {
     if (input.candidates.length === 0) return [];
@@ -42,6 +46,16 @@ export class LlmSuggestionRanker implements SuggestionRanker {
       abstract: (c.abstract ?? "").slice(0, 300),
     }));
 
+    const p = input.profile;
+    const profileText = [
+      line("Interests", p.interests),
+      line("Fields/domains", p.domains),
+      line("Organizations of interest", p.organizations),
+      line("Avoid", p.avoid),
+      `Goal: ${p.goal?.trim() || "(none)"}`,
+      `Level: ${p.level ?? "(unknown)"}`,
+    ].join("\n");
+
     const content = await this.llm.complete({
       model: this.model,
       json: true,
@@ -50,11 +64,11 @@ export class LlmSuggestionRanker implements SuggestionRanker {
         {
           role: "system",
           content:
-            'Rank candidate papers for a reader. Use ONLY the provided candidates; never invent papers or ids. Return strict JSON {"suggestions":[{"externalId","source","kind":"classic"|"recent","score":0..1,"reason":string}]}. "classic" = seminal/foundational and relevant; "recent" = new and relevant. One-sentence reasons. Up to 12.',
+            'Rank candidate papers for a reader, personalized to their profile. Use ONLY the provided candidates; never invent papers or ids. Favor papers matching the reader\'s interests, fields, organizations, and goal; de-prioritize anything in "Avoid". Return strict JSON {"suggestions":[{"externalId","source","kind":"classic"|"recent","score":0..1,"reason":string}]}. "classic" = seminal/foundational and relevant; "recent" = new and relevant. Reasons are one sentence and should reference why it fits this reader. Up to 12.',
         },
         {
           role: "user",
-          content: `Interests: ${input.profile.interests.join(", ") || "(none)"}\nLevel: ${input.profile.level ?? "(unknown)"}\nCandidates:\n${JSON.stringify(list)}`,
+          content: `Reader profile:\n${profileText}\n\nCandidates:\n${JSON.stringify(list)}`,
         },
       ],
     });

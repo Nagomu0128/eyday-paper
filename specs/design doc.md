@@ -204,7 +204,7 @@
   - **Semantic Scholar**: Recommendations API(ある論文に類似)＋ Academic Graph(被引用数・参考文献)。無料。**APIキー(無料・メール発行)で1RPSの専用枠**。バッチ/`fields`制限/指数バックオフ推奨。
   - **arXiv API**: 分野別の最新(Atomフィード)。
   - **OpenAlex**: 網羅・フィルタ(polite poolにメール付与)。
-- **流れ**: 蔵書 + 興味タグ + レベル/読みやすさ から候補を実APIで収集 → 安価モデルで粗選別 → `gpt-5.4` でランキングと「なぜ薦めるか」を生成 → 「定番」「最新」に分けて提示。**既読・所蔵済みは除外。**
+- **流れ**: 蔵書 + パーソナライズタグ(興味/分野・領域/企業・研究機関) + レベル/読みやすさ から候補を実APIで収集 → 安価モデルで粗選別 → `gpt-5.4` でランキングと「なぜ薦めるか」を生成(目的=goal を文脈に、避けたいトピック=avoid を抑制) → 「定番」「最新」に分けて提示。**既読・所蔵済みは除外。**
 - **実行**: **Cron Trigger で日次バッチ** → 結果を D1 にキャッシュ。画面では即表示、手動更新ボタンも用意。
 - **原則**: 事実(重要・最新)は実データに、解釈・個人化はLLMに。LLMの記憶だけに頼ると実在しない論文を生成する。バッチ+キャッシュで待たせない。
 
@@ -260,7 +260,13 @@ user(
 -- account(Better Auth): providerId='google', accountId=google sub, tokens, scope ...
 
 -- プロフィール(1ユーザー1行)
-profile(user_id PK, interests_json, level, readability, output_lang /* 'ja'|'en' */, updated_at)
+-- interests/domains/organizations/avoid は自由記述の「サーバータグ」(Discord風)で、提案のパーソナライズ入力。
+-- goal は自由記述の研究/学習目的(ランカーの文脈)。
+profile(
+  user_id PK,
+  interests_json, domains_json, organizations_json, avoid_json, goal,
+  level, readability, output_lang /* 'ja'|'en' */, updated_at
+)
 
 -- 論文
 paper(
