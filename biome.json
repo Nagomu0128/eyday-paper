@@ -13,7 +13,8 @@
       "!**/.wrangler",
       "!**/node_modules",
       "!worker-configuration.d.ts",
-      "!**/*.gen.ts"
+      "!**/*.gen.ts",
+      "!**/*.css"
     ]
   },
   "formatter": {

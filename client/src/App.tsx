@@ -2,88 +2,90 @@ import { useEffect, useState } from "react";
 import { Library } from "./components/Library";
 import { Reader } from "./components/Reader";
 import { Settings } from "./components/Settings";
+import { type NavId, Sidebar } from "./components/Sidebar";
 import { SignIn } from "./components/SignIn";
 import { Suggestions } from "./components/Suggestions";
+import { IconButton } from "./components/ui";
 import { api } from "./lib/api";
+import { BrandMark, IconMenu, IconSpinner } from "./lib/icons";
+import { useSuggestionsStatus } from "./lib/suggestionsStore";
+import { useFaviconSpinner } from "./lib/useFaviconSpinner";
+import type { Me } from "./types";
 
-type View =
-  | { name: "library" }
-  | { name: "suggestions" }
-  | { name: "settings" }
-  | { name: "reader"; paperId: string };
+type View = { name: NavId } | { name: "reader"; paperId: string };
 type Auth = "loading" | "in" | "out";
 
-const navClass = (active: boolean) =>
-  active ? "font-medium text-stone-900" : "text-stone-500 hover:text-stone-800";
+const navIdFor = (view: View): NavId => (view.name === "reader" ? "library" : view.name);
 
 export default function App() {
   const [auth, setAuth] = useState<Auth>("loading");
+  const [me, setMe] = useState<Me | null>(null);
   const [view, setView] = useState<View>({ name: "library" });
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const { refreshing } = useSuggestionsStatus();
 
   useEffect(() => {
     api
       .me()
-      .then((m) => setAuth(m ? "in" : "out"))
+      .then((m) => {
+        setMe(m);
+        setAuth(m ? "in" : "out");
+      })
       .catch(() => setAuth("out"));
   }, []);
 
+  // Keep the suggestion spinner visible in the browser tab, even when backgrounded.
+  useFaviconSpinner(auth === "in" && refreshing);
+  useEffect(() => {
+    document.title = refreshing ? "更新中… · eyday-paper" : "eyday-paper";
+  }, [refreshing]);
+
   if (auth === "loading") {
-    return <div className="grid min-h-dvh place-items-center bg-stone-50 text-stone-400">…</div>;
+    return (
+      <div className="grid min-h-dvh place-items-center bg-paper text-ink-faint">
+        <IconSpinner className="text-[1.5rem] text-primary" />
+      </div>
+    );
   }
   if (auth === "out") return <SignIn />;
 
-  return (
-    <div className="min-h-dvh bg-stone-50 text-stone-900">
-      <header className="sticky top-0 z-10 border-b border-stone-200 bg-stone-50/80 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
-          <button
-            type="button"
-            onClick={() => setView({ name: "library" })}
-            className="font-semibold tracking-tight"
-          >
-            eyday<span className="text-amber-700">-paper</span>
-          </button>
-          <nav className="flex items-center gap-4 text-sm">
-            <button
-              type="button"
-              onClick={() => setView({ name: "library" })}
-              className={navClass(view.name === "library")}
-            >
-              ライブラリ
-            </button>
-            <button
-              type="button"
-              onClick={() => setView({ name: "suggestions" })}
-              className={navClass(view.name === "suggestions")}
-            >
-              提案
-            </button>
-            <button
-              type="button"
-              onClick={() => setView({ name: "settings" })}
-              className={navClass(view.name === "settings")}
-            >
-              設定
-            </button>
-            <button
-              type="button"
-              onClick={() => api.signOut()}
-              className="text-stone-400 hover:text-stone-700"
-            >
-              Sign out
-            </button>
-          </nav>
-        </div>
-      </header>
+  const go = (name: NavId) => setView({ name });
 
-      {view.name === "library" && (
-        <Library onOpen={(paperId) => setView({ name: "reader", paperId })} />
-      )}
-      {view.name === "suggestions" && <Suggestions />}
-      {view.name === "settings" && <Settings />}
-      {view.name === "reader" && (
-        <Reader paperId={view.paperId} onBack={() => setView({ name: "library" })} />
-      )}
+  return (
+    <div className="flex h-dvh overflow-hidden bg-paper text-ink">
+      <Sidebar
+        active={navIdFor(view)}
+        onNavigate={go}
+        me={me}
+        mobileOpen={mobileOpen}
+        onCloseMobile={() => setMobileOpen(false)}
+      />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Mobile top bar */}
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-paper/85 px-2.5 backdrop-blur lg:hidden">
+          <IconButton label="メニュー" onClick={() => setMobileOpen(true)}>
+            <IconMenu />
+          </IconButton>
+          <span className="grid h-7 w-7 place-items-center rounded-lg bg-primary text-[1.05rem] text-white">
+            <BrandMark />
+          </span>
+          <span className="font-serif text-[1.05rem] font-semibold tracking-tight">
+            eyday<span className="text-primary">·paper</span>
+          </span>
+        </header>
+
+        <main className="min-h-0 flex-1 overflow-hidden">
+          {view.name === "library" && (
+            <Library onOpen={(paperId) => setView({ name: "reader", paperId })} />
+          )}
+          {view.name === "suggestions" && <Suggestions />}
+          {view.name === "settings" && <Settings />}
+          {view.name === "reader" && (
+            <Reader paperId={view.paperId} onBack={() => setView({ name: "library" })} />
+          )}
+        </main>
+      </div>
     </div>
   );
 }
