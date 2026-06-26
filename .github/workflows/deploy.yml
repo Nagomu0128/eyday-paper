@@ -43,5 +43,8 @@ jobs:
       - name: Build (Vite client + Worker)
         run: npm run build
 
+      # Deploy the Vite build output (worker + client assets). The generated
+      # dist/eyday_paper/wrangler.json carries assets.directory + all bindings;
+      # the root wrangler.jsonc alone omits the client assets.
       - name: Deploy to Cloudflare Workers
-        run: npx wrangler deploy
+        run: npm run deploy

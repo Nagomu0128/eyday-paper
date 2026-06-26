@@ -53,7 +53,7 @@ wrangler secret put S2_API_KEY               # optional (Semantic Scholar)
 npm run check                 # format/lint/typecheck/depcruise/test must be green
 npm run db:migrate:remote     # wrangler d1 migrations apply eyday-paper --remote
 npm run build                 # vite build (client + worker)
-npx wrangler deploy           # uploads the bundle; custom domain routed by Terraform
+npm run deploy                # wrangler deploy -c dist/eyday_paper/wrangler.json (worker + client assets)
 ```
 
 ## 6. Smoke test
@@ -66,8 +66,8 @@ Watch cost/usage in the AI Gateway dashboard.
 
 `.github/workflows/deploy.yml` runs on every push to `main` (and via manual
 **Run workflow**): `npm run check` → `db:migrate:remote` → `npm run build` →
-`wrangler deploy`. Cron triggers and bindings in `wrangler.jsonc` are registered
-by the deploy.
+`npm run deploy` (`wrangler deploy -c dist/eyday_paper/wrangler.json`). Cron
+triggers and bindings in `wrangler.jsonc` are registered by the deploy.
 
 **One-time GitHub setup** (repo → Settings → Secrets and variables → Actions):
 - `CLOUDFLARE_API_TOKEN` — token with **Workers Scripts: Edit**, **D1: Edit**, and

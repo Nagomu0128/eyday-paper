@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "wrangler deploy",
+    "deploy": "wrangler deploy -c dist/eyday_paper/wrangler.json",
     "cf-typegen": "wrangler types",
     "format": "biome check --write .",
     "format:check": "biome format .",
