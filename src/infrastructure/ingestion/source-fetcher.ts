@@ -9,7 +9,7 @@ export class HttpSourceFetcher implements SourceFetcher {
     const url = meta.pdfUrl ?? (meta.sourceUrl?.endsWith(".pdf") ? meta.sourceUrl : null);
     if (!url) return null;
 
-    const res = await fetchWithRetry(url);
+    const res = await fetchWithRetry(url, {}, { timeoutMs: 30_000 });
     if (!res.ok) return null;
     return res.arrayBuffer();
   }

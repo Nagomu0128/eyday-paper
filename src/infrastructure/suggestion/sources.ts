@@ -48,7 +48,7 @@ export class ArxivRecentSource implements SuggestionSource {
     for (const q of queries) {
       try {
         const url = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(q)}&sortBy=submittedDate&sortOrder=descending&max_results=8`;
-        const res = await fetchWithRetry(url, {}, { retries: 1 });
+        const res = await fetchWithRetry(url, {}, { retries: 1, timeoutMs: 8000 });
         if (!res.ok) continue;
         const xml = await res.text();
         for (const entry of xml.match(/<entry>[\s\S]*?<\/entry>/g) ?? []) {
@@ -82,7 +82,7 @@ export class OpenAlexSource implements SuggestionSource {
     for (const q of queries) {
       try {
         const url = `https://api.openalex.org/works?search=${encodeURIComponent(q)}&per_page=8&mailto=${MAILTO}`;
-        const res = await fetchWithRetry(url, {}, { retries: 1 });
+        const res = await fetchWithRetry(url, {}, { retries: 1, timeoutMs: 8000 });
         if (!res.ok) continue;
         const data = (await res.json()) as {
           results?: {
@@ -133,7 +133,7 @@ export class S2RecommendationsSource implements SuggestionSource {
           headers,
           body: JSON.stringify({ positivePaperIds: seeds, negativePaperIds: [] }),
         },
-        { retries: 1 },
+        { retries: 1, timeoutMs: 8000 },
       );
       if (!res.ok) return [];
       const data = (await res.json()) as {
