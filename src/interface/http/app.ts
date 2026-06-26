@@ -76,6 +76,23 @@ const routes = app
       return c.json(result, result.deduped ? 200 : 201);
     },
   )
+  // Upload a PDF file (drag & drop / file picker). Stored in R2; text extracted async.
+  .post("/api/papers/upload", requireAuth, async (c) => {
+    const form = await c.req.formData().catch(() => null);
+    const file = form?.get("file");
+    if (!(file instanceof File)) throw new AppError("validation", "no file uploaded");
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf) throw new AppError("validation", "only PDF files are supported");
+    if (file.size === 0) throw new AppError("validation", "empty file");
+    if (file.size > 30 * 1024 * 1024) throw new AppError("validation", "file too large (max 30MB)");
+    const result = await buildIngestPaper(c.env).execute(c.get("ctx").userId, {
+      kind: "pdf",
+      value: "",
+      filename: file.name,
+      pdfBytes: await file.arrayBuffer(),
+    });
+    return c.json(result, result.deduped ? 200 : 201);
+  })
   // List the user's library.
   .get("/api/papers", requireAuth, async (c) => {
     const list = await buildLibrary(c.env).papers.list(c.get("ctx").userId);

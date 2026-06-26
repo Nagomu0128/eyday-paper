@@ -155,4 +155,36 @@ describe("ProcessPaper pipeline", () => {
     expect(await d.chunks.listByPaper(userId, paper.id)).toHaveLength(2);
     expect(d.vectorIndex.deletes).toHaveLength(1); // second run cleared the first run's vectors
   });
+
+  it("still produces a readable paper when tagging + embedding fail (non-fatal)", async () => {
+    const db = createDb(env.DB);
+    const d = {
+      papers: new DrizzlePaperRepository(db),
+      folders: new DrizzleFolderRepository(db),
+      tags: new DrizzleTagRepository(db),
+      chunks: new DrizzleChunkRepository(db),
+      storage: new R2ObjectStorage(env.BUCKET),
+      extractor: new StubExtractor(),
+      tagger: { suggest: () => Promise.reject(new Error("LLM gateway 502")) } as Tagger,
+      folderAssigner: new StubFolderAssigner(),
+      embedder: { embed: () => Promise.reject(new Error("AI unavailable")) } as Embedder,
+      vectorIndex: new RecordingIndex(),
+    };
+    const userId = await seedUser();
+    const paper = await d.papers.create({
+      id: crypto.randomUUID(),
+      userId,
+      title: "X",
+      abstract: "a",
+    });
+
+    // Must not throw even though the LLM tagger and the embedder both reject.
+    await new ProcessPaper(d).execute({ userId, paperId: paper.id });
+
+    const updated = await d.papers.findById(userId, paper.id);
+    expect(updated?.textR2Key).toBe(r2Keys.text(userId, paper.id)); // reflow text persisted
+    expect(await d.chunks.listByPaper(userId, paper.id)).toHaveLength(2); // chunks persisted
+    expect(await d.tags.listForPaper(userId, paper.id)).toHaveLength(0); // tagging skipped
+    expect(d.vectorIndex.upserts).toHaveLength(0); // embedding skipped
+  });
 });

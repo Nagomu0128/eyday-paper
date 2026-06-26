@@ -78,6 +78,15 @@ export const api = {
     );
   },
 
+  async uploadPdf(file: File): Promise<{ paperId: string; deduped: boolean }> {
+    const form = new FormData();
+    form.append("file", file);
+    // No content-type header — the browser sets the multipart boundary.
+    const res = await fetch("/api/papers/upload", { method: "POST", body: form });
+    if (!res.ok) throw new ApiError(res.status);
+    return res.json() as Promise<{ paperId: string; deduped: boolean }>;
+  },
+
   async getPaper(id: string): Promise<{ paper: Paper; tags: Tag[]; folder: Folder | null }> {
     return asJson(await fetch(`/api/papers/${id}`));
   },

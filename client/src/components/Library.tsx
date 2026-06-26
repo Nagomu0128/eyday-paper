@@ -1,5 +1,6 @@
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
+import { cx } from "../lib/cx";
 import {
   IconChevronDown,
   IconChevronRight,
@@ -7,9 +8,11 @@ import {
   IconFolder,
   IconFolderOpen,
   IconLibrary,
+  IconLink,
   IconPlus,
   IconSearch,
   IconSpinner,
+  IconUpload,
 } from "../lib/icons";
 import type { Folder, Paper, PaperStatus } from "../types";
 import { Button, EmptyState, StatusBadge } from "./ui";
@@ -64,6 +67,9 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
   const [status, setStatus] = useState<StatusFilter>("all");
   const [sort, setSort] = useState<Sort>("added-desc");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = () => {
     api
@@ -91,6 +97,26 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
       setError("取り込みに失敗しました。arXiv ID / DOI / URL を確認してください。");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const uploadFiles = async (files: FileList | File[]) => {
+    const pdfs = Array.from(files).filter(
+      (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"),
+    );
+    if (pdfs.length === 0) {
+      setError("PDF ファイルを選択してください。");
+      return;
+    }
+    setUploading(true);
+    setError(null);
+    try {
+      for (const f of pdfs) await api.uploadPdf(f);
+      load();
+    } catch {
+      setError("アップロードに失敗しました。ファイルを確認してください。");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -202,27 +228,68 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
           </p>
         </div>
 
-        {/* Ingest */}
-        <form
-          onSubmit={submit}
-          className="rounded-2xl border border-line bg-surface p-2 shadow-card"
+        {/* Ingest — paste an id/URL or drop / pick a PDF file. */}
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: drop zone; the file-picker button + paste input are the accessible paths */}
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            setDragging(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            if (e.dataTransfer.files.length > 0) uploadFiles(e.dataTransfer.files);
+          }}
+          className={cx(
+            "rounded-2xl border bg-surface p-2 shadow-card transition-colors",
+            dragging ? "border-dashed border-primary bg-primary-softer" : "border-line",
+          )}
         >
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row">
             <div className="flex flex-1 items-center gap-2.5 rounded-xl px-3">
-              <IconPlus className="text-[1.2rem] text-primary" />
+              <IconLink className="text-[1.15rem] text-primary" />
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="arXiv ID / DOI / URL を貼り付け（例: 1706.03762）"
-                className="h-11 flex-1 bg-transparent text-[0.95rem] outline-none placeholder:text-ink-faint"
+                className="h-10 flex-1 bg-transparent text-[0.9rem] outline-none placeholder:text-ink-faint"
               />
             </div>
-            <Button type="submit" variant="primary" size="lg" disabled={busy} className="sm:w-auto">
-              {busy ? <IconSpinner /> : <IconPlus />}
-              {busy ? "取り込み中…" : "取り込む"}
-            </Button>
-          </div>
-        </form>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 text-sm font-medium text-ink transition-colors hover:bg-surface-muted disabled:opacity-50"
+              >
+                {uploading ? <IconSpinner /> : <IconUpload />}
+                <span className="hidden sm:inline">{uploading ? "アップロード中…" : "PDF"}</span>
+              </button>
+              <Button type="submit" variant="primary" disabled={busy}>
+                {busy ? <IconSpinner /> : <IconPlus />}
+                {busy ? "取り込み中…" : "取り込む"}
+              </Button>
+            </div>
+          </form>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files) uploadFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+          <p className="px-3 pb-1 pt-1.5 text-[0.72rem] text-ink-faint">
+            arXiv ID / DOI / URL を貼り付けるか、PDF をドラッグ&ドロップ・選択
+          </p>
+        </div>
         {error && <p className="mt-2.5 px-1 text-sm text-danger">{error}</p>}
 
         {/* Toolbar */}
