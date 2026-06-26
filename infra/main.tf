@@ -6,6 +6,11 @@
 resource "cloudflare_d1_database" "main" {
   account_id = var.account_id
   name       = var.name_prefix
+  # Set explicitly so the provider never sends a null read_replication on update
+  # (API rejects null). "auto" is the Cloudflare default for new databases.
+  read_replication = {
+    mode = "auto"
+  }
 }
 
 # Object storage: PDFs, extracted structured text, figures (egress-free).
