@@ -41,9 +41,7 @@ export function Suggestions() {
       <div className="mx-auto max-w-4xl px-5 py-7 sm:px-8">
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
-            <h1 className="font-serif text-2xl font-semibold tracking-tight text-ink">
-              Suggestions
-            </h1>
+            <h1 className="text-xl font-semibold tracking-tight text-ink">Suggestions</h1>
             <p className="mt-1 text-sm text-ink-muted">
               あなたの蔵書と興味タグをもとに、実データから根拠づけて提案します。
             </p>

@@ -89,7 +89,7 @@ export default function App() {
           <span className="grid h-7 w-7 place-items-center rounded-lg bg-primary text-[1.05rem] text-white">
             <BrandMark />
           </span>
-          <span className="font-serif text-[1.05rem] font-semibold tracking-tight">
+          <span className="text-[1.05rem] font-semibold tracking-tight">
             eyday<span className="text-primary">·paper</span>
           </span>
         </header>
