@@ -12,14 +12,13 @@
   "observability": {
     "enabled": true
   },
-  // Relational data (Better Auth tables + app tables). `database_id` is a
-  // placeholder for local dev; the real id comes from Terraform output and is
-  // injected at deploy time. Miniflare uses a local SQLite db regardless.
+  // Relational data (Better Auth tables + app tables). `database_id` is the
+  // Terraform-managed D1 id; Miniflare uses a local SQLite db in tests regardless.
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "eyday-paper",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "ee5718bd-74e2-476e-acc5-3025b7899cf0",
       "migrations_dir": "src/db/migrations"
     }
   ],
@@ -34,7 +33,7 @@
   "kv_namespaces": [
     {
       "binding": "KV",
-      "id": "00000000000000000000000000000000"
+      "id": "dc6142a9c64d48b5a49d39ddd8402f25"
     }
   ],
   // RAG vector search (dense + filter by userId/paperId). Used unconditionally
