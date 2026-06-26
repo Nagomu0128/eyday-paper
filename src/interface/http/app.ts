@@ -56,7 +56,15 @@ const routes = app
       time: new Date().toISOString(),
     }),
   )
-  .get("/api/me", requireAuth, (c) => c.json({ userId: c.get("ctx").userId }))
+  .get("/api/me", requireAuth, (c) => {
+    const me = c.get("me");
+    return c.json({
+      userId: c.get("ctx").userId,
+      name: me.name,
+      email: me.email,
+      image: me.image,
+    });
+  })
   // Ingest a paper from arXiv id / DOI / URL. Heavy processing runs async.
   .post(
     "/api/papers",
@@ -187,6 +195,10 @@ const routes = app
       "json",
       z.object({
         interests: z.array(z.string().min(1).max(60)).max(50).optional(),
+        domains: z.array(z.string().min(1).max(60)).max(50).optional(),
+        organizations: z.array(z.string().min(1).max(80)).max(50).optional(),
+        avoid: z.array(z.string().min(1).max(60)).max(50).optional(),
+        goal: z.string().max(500).nullish(),
         level: z.string().max(60).nullish(),
         readability: z.string().max(60).nullish(),
         outputLang: z.enum(["ja", "en"]).optional(),

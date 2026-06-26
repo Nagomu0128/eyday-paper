@@ -2,9 +2,17 @@ import { createMiddleware } from "hono/factory";
 import { type Auth, createAuth } from "../../../infrastructure/auth/better-auth";
 import type { RequestContext } from "../../../shared/context";
 
+/** Presentation-only profile of the signed-in user (for the app shell avatar). */
+export type SessionUser = {
+  name: string | null;
+  email: string | null;
+  image: string | null;
+};
+
 export type AuthVariables = {
   auth: Auth;
   ctx: RequestContext;
+  me: SessionUser;
 };
 
 export type AuthEnv = { Bindings: Env; Variables: AuthVariables };
@@ -22,5 +30,10 @@ export const requireAuth = createMiddleware<AuthEnv>(async (c, next) => {
     return c.json({ error: "unauthorized" }, 401);
   }
   c.set("ctx", { userId: session.user.id });
+  c.set("me", {
+    name: session.user.name ?? null,
+    email: session.user.email ?? null,
+    image: session.user.image ?? null,
+  });
   await next();
 });

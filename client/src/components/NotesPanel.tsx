@@ -1,7 +1,10 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { api } from "../lib/api";
+import { IconNote, IconTrash } from "../lib/icons";
 import type { Note } from "../types";
+import { EmptyState } from "./ui";
 
+/** Notes/highlights for a paper. Content-only (lives in the reader's right pane). */
 export function NotesPanel({ paperId }: { paperId: string }) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [body, setBody] = useState("");
@@ -29,39 +32,54 @@ export function NotesPanel({ paperId }: { paperId: string }) {
   };
 
   return (
-    <section className="mt-10 border-t border-stone-200 pt-8 font-sans">
-      <h2 className="mb-3 text-lg font-semibold">メモ</h2>
-      <form onSubmit={add} className="flex gap-2">
-        <input
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder="メモを追加…"
-          className="flex-1 rounded-lg border border-stone-300 bg-white px-4 py-2.5 outline-none focus:border-amber-600"
-        />
-        <button
-          type="submit"
-          className="rounded-lg border border-stone-300 bg-white px-4 py-2.5 font-medium text-stone-700 hover:bg-stone-100"
-        >
-          追加
-        </button>
-      </form>
-      <ul className="mt-4 space-y-2">
-        {notes.map((n) => (
-          <li
-            key={n.id}
-            className="flex items-start justify-between gap-3 rounded-lg border border-stone-200 bg-white p-3"
-          >
-            <span className="whitespace-pre-wrap text-sm text-stone-800">{n.body}</span>
-            <button
-              type="button"
-              onClick={() => remove(n.id)}
-              className="shrink-0 text-xs text-stone-400 hover:text-rose-600"
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4">
+        {notes.length === 0 ? (
+          <EmptyState
+            icon={<IconNote />}
+            title="メモはまだありません"
+            description="読みながら気づきや疑問を書き留めましょう。"
+          />
+        ) : (
+          notes.map((n) => (
+            <div
+              key={n.id}
+              className="group flex items-start justify-between gap-3 rounded-xl border border-line bg-surface px-3 py-2.5 shadow-card"
             >
-              削除
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
+              <span className="whitespace-pre-wrap text-[0.85rem] leading-6 text-ink">
+                {n.body}
+              </span>
+              <button
+                type="button"
+                onClick={() => remove(n.id)}
+                aria-label="削除"
+                className="shrink-0 rounded-md p-1 text-ink-faint opacity-0 transition-opacity hover:bg-danger-soft hover:text-danger group-hover:opacity-100"
+              >
+                <IconTrash className="text-[1rem]" />
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+
+      <form onSubmit={add} className="border-t border-line bg-surface-muted/40 p-3">
+        <div className="flex items-end gap-2 rounded-xl border border-line bg-surface p-1.5 focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15">
+          <input
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="メモを追加…"
+            className="h-9 flex-1 bg-transparent px-2 text-[0.875rem] outline-none placeholder:text-ink-faint"
+          />
+          <button
+            type="submit"
+            disabled={!body.trim()}
+            aria-label="追加"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary text-[1.2rem] text-white transition-colors hover:bg-primary-hover disabled:opacity-40"
+          >
+            +
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

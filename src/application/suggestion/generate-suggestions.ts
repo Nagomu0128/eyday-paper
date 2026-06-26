@@ -39,6 +39,8 @@ export class GenerateSuggestions {
 
     const candidates = await d.source.collect({
       interests: profile?.interests ?? [],
+      domains: profile?.domains ?? [],
+      organizations: profile?.organizations ?? [],
       seedArxivIds: [...ownedArxiv],
       seedDois: [...ownedDoi],
     });
@@ -61,7 +63,14 @@ export class GenerateSuggestions {
     }
 
     const ranked = await d.ranker.rank({
-      profile: { interests: profile?.interests ?? [], level: profile?.level ?? null },
+      profile: {
+        interests: profile?.interests ?? [],
+        domains: profile?.domains ?? [],
+        organizations: profile?.organizations ?? [],
+        avoid: profile?.avoid ?? [],
+        goal: profile?.goal ?? null,
+        level: profile?.level ?? null,
+      },
       candidates: fresh,
     });
 

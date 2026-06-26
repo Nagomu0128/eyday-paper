@@ -21,7 +21,13 @@ export const profile = sqliteTable("profile", {
   userId: text("user_id")
     .primaryKey()
     .references(() => user.id, { onDelete: "cascade" }),
+  // Personalization signals fed to the suggestion ranker. The *_json columns are
+  // arrays of free-text "server tags" (Discord-style); `goal` is free text.
   interestsJson: text("interests_json").notNull().default("[]"),
+  domainsJson: text("domains_json").notNull().default("[]"),
+  organizationsJson: text("organizations_json").notNull().default("[]"),
+  avoidJson: text("avoid_json").notNull().default("[]"),
+  goal: text("goal"),
   level: text("level"),
   readability: text("readability"),
   outputLang: text("output_lang", { enum: ["ja", "en"] })

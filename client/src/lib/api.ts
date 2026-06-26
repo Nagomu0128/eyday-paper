@@ -3,6 +3,7 @@ import type {
   Explanation,
   ExtractedDoc,
   Folder,
+  Me,
   Note,
   OutputLang,
   Paper,
@@ -15,6 +16,10 @@ import type {
 
 export interface ProfilePatch {
   interests?: string[];
+  domains?: string[];
+  organizations?: string[];
+  avoid?: string[];
+  goal?: string | null;
   level?: string | null;
   readability?: string | null;
   outputLang?: OutputLang;
@@ -32,7 +37,7 @@ const asJson = async <T>(res: Response): Promise<T> => {
 };
 
 export const api = {
-  async me(): Promise<{ userId: string } | null> {
+  async me(): Promise<Me | null> {
     const res = await fetch("/api/me");
     if (res.status === 401) return null;
     return asJson(res);
@@ -56,6 +61,11 @@ export const api = {
   async listPapers(): Promise<Paper[]> {
     const data = await asJson<{ papers: Paper[] }>(await fetch("/api/papers"));
     return data.papers;
+  },
+
+  async listFolders(): Promise<Folder[]> {
+    const data = await asJson<{ folders: Folder[] }>(await fetch("/api/folders"));
+    return data.folders;
   },
 
   async ingest(input: string): Promise<{ paperId: string; deduped: boolean }> {

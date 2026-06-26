@@ -6,9 +6,22 @@ import { AppError } from "../../shared/errors";
 
 type Row = typeof profile.$inferSelect;
 
+const arr = (json: string): string[] => {
+  try {
+    const v = JSON.parse(json);
+    return Array.isArray(v) ? (v as string[]) : [];
+  } catch {
+    return [];
+  }
+};
+
 const toProfile = (r: Row): Profile => ({
   userId: r.userId,
-  interests: JSON.parse(r.interestsJson) as string[],
+  interests: arr(r.interestsJson),
+  domains: arr(r.domainsJson),
+  organizations: arr(r.organizationsJson),
+  avoid: arr(r.avoidJson),
+  goal: r.goal,
   level: r.level,
   readability: r.readability,
   outputLang: r.outputLang,
@@ -26,6 +39,11 @@ export class DrizzleProfileRepository implements ProfileRepository {
   async upsert(userId: string, patch: ProfilePatch): Promise<Profile> {
     const set: Partial<typeof profile.$inferInsert> = { updatedAt: new Date() };
     if (patch.interests !== undefined) set.interestsJson = JSON.stringify(patch.interests);
+    if (patch.domains !== undefined) set.domainsJson = JSON.stringify(patch.domains);
+    if (patch.organizations !== undefined)
+      set.organizationsJson = JSON.stringify(patch.organizations);
+    if (patch.avoid !== undefined) set.avoidJson = JSON.stringify(patch.avoid);
+    if (patch.goal !== undefined) set.goal = patch.goal;
     if (patch.level !== undefined) set.level = patch.level;
     if (patch.readability !== undefined) set.readability = patch.readability;
     if (patch.outputLang !== undefined) set.outputLang = patch.outputLang;

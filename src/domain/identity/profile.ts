@@ -3,7 +3,13 @@ export type OutputLang = "ja" | "en";
 
 export interface Profile {
   userId: string;
+  /** Free-text "server tags" (Discord-style) that personalize suggestions. */
   interests: string[];
+  domains: string[];
+  organizations: string[];
+  avoid: string[];
+  /** Free-text research/learning goal; contextualizes the suggestion ranker. */
+  goal: string | null;
   level: string | null;
   readability: string | null;
   outputLang: OutputLang;
@@ -12,6 +18,10 @@ export interface Profile {
 
 export interface ProfilePatch {
   interests?: string[];
+  domains?: string[];
+  organizations?: string[];
+  avoid?: string[];
+  goal?: string | null;
   level?: string | null;
   readability?: string | null;
   outputLang?: OutputLang;
