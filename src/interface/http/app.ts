@@ -170,14 +170,31 @@ const routes = app
       recent: all.filter((s) => s.kind === "recent"),
     });
   })
-  // Manually refresh suggestions now.
-  .post("/api/suggestions/refresh", requireAuth, async (c) => {
-    const count = await buildGenerateSuggestions(c.env).execute(c.get("ctx").userId);
-    return c.json({ count });
+  // Manually refresh suggestions. The heavy work (external APIs + LLM ranking)
+  // runs off the request path via waitUntil, so a slow/failing upstream never
+  // 502s the request; the client polls the list for completion.
+  .post("/api/suggestions/refresh", requireAuth, (c) => {
+    const userId = c.get("ctx").userId;
+    c.executionCtx.waitUntil(
+      buildGenerateSuggestions(c.env)
+        .execute(userId)
+        .catch((err) => console.error("suggestion refresh failed", err)),
+    );
+    return c.json({ status: "started" as const }, 202);
   })
+  // Import a suggestion: ingest server-side from the best identifier
+  // (arXiv > DOI > URL); only mark imported once ingestion succeeds.
   .post("/api/suggestions/:id/import", requireAuth, async (c) => {
-    await buildSuggestionRepo(c.env).markImported(c.get("ctx").userId, c.req.param("id"));
-    return c.json({ ok: true });
+    const userId = c.get("ctx").userId;
+    const id = c.req.param("id");
+    const repo = buildSuggestionRepo(c.env);
+    const sug = await repo.findById(userId, id);
+    if (!sug) throw new AppError("not_found", "suggestion not found");
+    const input = sug.arxivId ?? sug.doi ?? sug.url;
+    if (!input) throw new AppError("validation", "suggestion has no importable identifier");
+    const result = await buildIngestPaper(c.env).execute(userId, detectIngestInput(input));
+    await repo.markImported(userId, id);
+    return c.json({ paperId: result.paperId, deduped: result.deduped });
   })
   .post("/api/suggestions/:id/dismiss", requireAuth, async (c) => {
     await buildSuggestionRepo(c.env).dismiss(c.get("ctx").userId, c.req.param("id"));

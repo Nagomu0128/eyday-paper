@@ -108,4 +108,49 @@ describe("GenerateSuggestions", () => {
     await uc.execute(userId);
     expect(await repo.list(userId)).toHaveLength(0); // stays dismissed
   });
+
+  it("falls back to heuristic ranking when the LLM ranker fails, persisting identifiers", async () => {
+    const { papers, profiles, repo } = deps();
+    const userId = await seedUser();
+    const candidates = [
+      ext({
+        externalId: "2406.0001",
+        source: "arxiv",
+        arxivId: "2406.0001",
+        year: 2026,
+        title: "Recent A",
+      }),
+      ext({
+        externalId: "W9",
+        source: "openalex",
+        doi: "10.1/old",
+        year: 2015,
+        title: "Classic B",
+      }),
+    ];
+    const throwingRanker: SuggestionRanker = {
+      rank: () => Promise.reject(new Error("LLM gateway 502")),
+    };
+    const uc = new GenerateSuggestions({
+      papers,
+      profiles,
+      source: new StubSource(candidates),
+      ranker: throwingRanker,
+      suggestions: repo,
+    });
+
+    const count = await uc.execute(userId);
+    expect(count).toBe(2); // heuristic fallback still produces suggestions
+
+    const all = await repo.list(userId);
+    expect(all.find((s) => s.title === "Recent A")?.arxivId).toBe("2406.0001");
+    expect(all.find((s) => s.title === "Classic B")?.doi).toBe("10.1/old");
+    // findById is tenant-scoped + returns the persisted identifiers used by import.
+    const first = all[0];
+    expect(first).toBeDefined();
+    if (first) {
+      expect((await repo.findById(userId, first.id))?.id).toBe(first.id);
+      expect(await repo.findById(await seedUser(), first.id)).toBeNull();
+    }
+  });
 });

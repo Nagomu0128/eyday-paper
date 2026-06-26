@@ -170,6 +170,10 @@ export const suggestion = sqliteTable(
     authorsJson: text("authors_json").notNull().default("[]"),
     year: integer("year"),
     url: text("url"),
+    // Canonical identifiers (when known) so import resolves via arXiv/DOI, not a
+    // non-resolvable landing-page URL.
+    arxivId: text("arxiv_id"),
+    doi: text("doi"),
     kind: text("kind", { enum: ["classic", "recent"] }).notNull(),
     score: real("score").notNull().default(0),
     reason: text("reason"),

@@ -31,7 +31,13 @@ export class AiGatewayLlmClient implements LlmClient {
         ...(opts.json ? { response_format: { type: "json_object" } } : {}),
       }),
     });
-    if (!res.ok) throw new AppError("upstream", `LLM gateway ${res.status}`);
+    if (!res.ok) {
+      // Surface the provider/gateway reason (model not found, gateway missing,
+      // auth/quota) to observability; keep the client-facing error generic.
+      const body = await res.text().catch(() => "");
+      console.error(`AI gateway ${res.status} (model ${opts.model}): ${body.slice(0, 300)}`);
+      throw new AppError("upstream", `LLM gateway ${res.status}`);
+    }
     const data = (await res.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
     };

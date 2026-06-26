@@ -10,6 +10,7 @@ import { api } from "./lib/api";
 import { BrandMark, IconMenu, IconSpinner } from "./lib/icons";
 import { useSuggestionsStatus } from "./lib/suggestionsStore";
 import { useFaviconSpinner } from "./lib/useFaviconSpinner";
+import { useMediaQuery } from "./lib/useMediaQuery";
 import type { Me } from "./types";
 
 type View = { name: NavId } | { name: "reader"; paperId: string };
@@ -22,6 +23,8 @@ export default function App() {
   const [me, setMe] = useState<Me | null>(null);
   const [view, setView] = useState<View>({ name: "library" });
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
   const { refreshing } = useSuggestionsStatus();
 
   useEffect(() => {
@@ -33,6 +36,20 @@ export default function App() {
       })
       .catch(() => setAuth("out"));
   }, []);
+
+  // ⌘/Ctrl+B toggles the sidebar (collapse on desktop, drawer on mobile).
+  useEffect(() => {
+    if (auth !== "in") return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        if (isDesktop) setCollapsed((v) => !v);
+        else setMobileOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [auth, isDesktop]);
 
   // Keep the suggestion spinner visible in the browser tab, even when backgrounded.
   useFaviconSpinner(auth === "in" && refreshing);
@@ -57,6 +74,8 @@ export default function App() {
         active={navIdFor(view)}
         onNavigate={go}
         me={me}
+        collapsed={collapsed}
+        onToggleCollapsed={() => setCollapsed((v) => !v)}
         mobileOpen={mobileOpen}
         onCloseMobile={() => setMobileOpen(false)}
       />

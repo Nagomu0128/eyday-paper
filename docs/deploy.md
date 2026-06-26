@@ -61,3 +61,21 @@ Visit `https://eyday-paper.yoshidakazuya.com`, sign in with Google, ingest an ar
 id (e.g. `1706.03762`), open the reader (reflow + PDF toggle), generate a summary,
 ask a question, and check **提案** after the daily cron (or POST `/api/suggestions/refresh`).
 Watch cost/usage in the AI Gateway dashboard.
+
+## 7. CI/CD — auto-deploy on push to `main`
+
+`.github/workflows/deploy.yml` runs on every push to `main` (and via manual
+**Run workflow**): `npm run check` → `db:migrate:remote` → `npm run build` →
+`wrangler deploy`. Cron triggers and bindings in `wrangler.jsonc` are registered
+by the deploy.
+
+**One-time GitHub setup** (repo → Settings → Secrets and variables → Actions):
+- `CLOUDFLARE_API_TOKEN` — token with **Workers Scripts: Edit**, **D1: Edit**, and
+  account read (Account → Workers AI/KV/R2/Vectorize as needed). Create at
+  Cloudflare dashboard → My Profile → API Tokens.
+- `CLOUDFLARE_ACCOUNT_ID` — the account id (same as `CF_ACCOUNT_ID`).
+
+App secrets (`BETTER_AUTH_SECRET`, `GOOGLE_*`, `OPENAI_API_KEY`, …) are **not** part
+of CI — they persist on the Worker from the one-time `wrangler secret put` (step 4),
+so a code deploy keeps them. Rotate them with `wrangler secret put`, never in CI.
+Provisioning (Terraform, Vectorize, AI Gateway) stays manual (steps 1–3).

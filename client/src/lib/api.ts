@@ -121,21 +121,19 @@ export const api = {
     return asJson(await fetch("/api/suggestions"));
   },
 
-  async refreshSuggestions(): Promise<{ count: number }> {
-    return asJson(await fetch("/api/suggestions/refresh", { method: "POST" }));
+  /** Kicks off the background refresh batch (202). Completion is observed by polling. */
+  async refreshSuggestions(): Promise<void> {
+    const res = await fetch("/api/suggestions/refresh", { method: "POST" });
+    if (!res.ok) throw new ApiError(res.status);
   },
 
   async dismissSuggestion(id: string): Promise<void> {
     await fetch(`/api/suggestions/${id}/dismiss`, { method: "POST" });
   },
 
-  async importSuggestion(id: string, input: string): Promise<void> {
-    await fetch("/api/papers", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ input }),
-    });
-    await fetch(`/api/suggestions/${id}/import`, { method: "POST" });
+  /** Server-side ingest from the suggestion's best identifier, then mark imported. */
+  async importSuggestion(id: string): Promise<{ paperId: string; deduped: boolean }> {
+    return asJson(await fetch(`/api/suggestions/${id}/import`, { method: "POST" }));
   },
 
   async getProfile(): Promise<Profile | null> {
