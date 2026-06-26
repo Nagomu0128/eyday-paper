@@ -187,17 +187,13 @@ const routes = app
       recent: all.filter((s) => s.kind === "recent"),
     });
   })
-  // Manually refresh suggestions. The heavy work (external APIs + LLM ranking)
-  // runs off the request path via waitUntil, so a slow/failing upstream never
-  // 502s the request; the client polls the list for completion.
-  .post("/api/suggestions/refresh", requireAuth, (c) => {
-    const userId = c.get("ctx").userId;
-    c.executionCtx.waitUntil(
-      buildGenerateSuggestions(c.env)
-        .execute(userId)
-        .catch((err) => console.error("suggestion refresh failed", err)),
-    );
-    return c.json({ status: "started" as const }, 202);
+  // Manually refresh suggestions. Runs synchronously and returns the count:
+  // external fetches + the LLM ranker are time-bounded (fetch timeouts) and the
+  // ranker is non-fatal (heuristic fallback), so it finishes within one request
+  // and the client gets a definitive result (no polling).
+  .post("/api/suggestions/refresh", requireAuth, async (c) => {
+    const count = await buildGenerateSuggestions(c.env).execute(c.get("ctx").userId);
+    return c.json({ count });
   })
   // Import a suggestion: ingest server-side from the best identifier
   // (arXiv > DOI > URL); only mark imported once ingestion succeeds.

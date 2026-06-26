@@ -6,6 +6,10 @@ export interface RetryOptions {
   baseDelayMs?: number;
   /** Per-attempt timeout. Without it a hung endpoint stalls the whole pipeline. */
   timeoutMs?: number;
+  /** Retry on HTTP 429 (default true). Turn off for quota-limited LLM calls,
+   *  where a 429 won't recover within the backoff window — retrying just
+   *  multiplies provider requests. */
+  retryOn429?: boolean;
 }
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -23,6 +27,7 @@ export const fetchWithRetry = async (
   const retries = opts.retries ?? 3;
   const base = opts.baseDelayMs ?? 400;
   const timeoutMs = opts.timeoutMs ?? 20_000;
+  const retryOn429 = opts.retryOn429 ?? true;
   const headers = new Headers(init.headers);
   if (!headers.has("User-Agent")) headers.set("User-Agent", USER_AGENT);
 
@@ -34,7 +39,8 @@ export const fetchWithRetry = async (
         headers,
         signal: init.signal ?? AbortSignal.timeout(timeoutMs),
       });
-      if ((res.status === 429 || res.status >= 500) && attempt < retries) {
+      const retryable = res.status >= 500 || (res.status === 429 && retryOn429);
+      if (retryable && attempt < retries) {
         await sleep(base * 2 ** attempt);
         continue;
       }
