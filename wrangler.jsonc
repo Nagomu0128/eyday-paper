@@ -65,8 +65,8 @@
       }
     ]
   },
-  // Daily suggestion batch (03:00 JST = 18:00 UTC). Caches results to D1.
+  // Daily suggestion batch (07:00 JST = 22:00 UTC). Caches results to D1.
   "triggers": {
-    "crons": ["0 18 * * *"]
+    "crons": ["0 22 * * *"]
   }
 }

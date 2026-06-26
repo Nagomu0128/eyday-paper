@@ -60,6 +60,8 @@ export interface Suggestion {
   authors: string[];
   year: number | null;
   url: string | null;
+  arxivId: string | null;
+  doi: string | null;
   kind: SuggestionKind;
   score: number;
   reason: string | null;
@@ -76,6 +78,8 @@ export interface NewSuggestion {
   authors: string[];
   year: number | null;
   url: string | null;
+  arxivId: string | null;
+  doi: string | null;
   kind: SuggestionKind;
   score: number;
   reason: string | null;
@@ -85,6 +89,7 @@ export interface SuggestionRepository {
   /** Atomically replace the user's `suggested` rows with a fresh batch (keeps imported/dismissed). */
   replaceSuggested(userId: string, suggestions: NewSuggestion[]): Promise<void>;
   list(userId: string, kind?: SuggestionKind): Promise<Suggestion[]>;
+  findById(userId: string, id: string): Promise<Suggestion | null>;
   markImported(userId: string, id: string): Promise<void>;
   dismiss(userId: string, id: string): Promise<void>;
 }

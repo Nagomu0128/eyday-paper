@@ -19,9 +19,6 @@ const SOURCE_LABEL: Record<Suggestion["source"], string> = {
   openalex: "OpenAlex",
 };
 
-const ingestInputFor = (s: Suggestion): string =>
-  s.source === "arxiv" ? s.externalId : (s.url ?? s.externalId);
-
 export function Suggestions() {
   const [data, setData] = useState<{ classic: Suggestion[]; recent: Suggestion[] } | null>(null);
   const { refreshing, error, finishedAt } = useSuggestionsStatus();
@@ -157,13 +154,20 @@ function Group({
 
 function Card({ s, onAction }: { s: Suggestion; onAction: () => void }) {
   const [busy, setBusy] = useState<null | "import" | "dismiss">(null);
+  const [err, setErr] = useState<string | null>(null);
 
-  const act = async (kind: "import" | "dismiss", fn: () => Promise<void>) => {
+  const act = async (kind: "import" | "dismiss", fn: () => Promise<unknown>) => {
     setBusy(kind);
+    setErr(null);
     try {
       await fn();
       onAction();
-    } finally {
+    } catch {
+      setErr(
+        kind === "import"
+          ? "取り込みに失敗しました。元リンクから確認してください。"
+          : "操作に失敗しました。",
+      );
       setBusy(null);
     }
   };
@@ -190,7 +194,7 @@ function Card({ s, onAction }: { s: Suggestion; onAction: () => void }) {
         <button
           type="button"
           disabled={busy !== null}
-          onClick={() => act("import", () => api.importSuggestion(s.id, ingestInputFor(s)))}
+          onClick={() => act("import", () => api.importSuggestion(s.id))}
           className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-[0.8rem] font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
         >
           {busy === "import" ? <IconSpinner /> : <IconPlus />}
@@ -217,6 +221,7 @@ function Card({ s, onAction }: { s: Suggestion; onAction: () => void }) {
           </a>
         )}
       </div>
+      {err && <p className="mt-2 text-[0.75rem] text-danger">{err}</p>}
     </div>
   );
 }

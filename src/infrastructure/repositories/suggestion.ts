@@ -19,6 +19,8 @@ const toSuggestion = (r: Row): Suggestion => ({
   authors: JSON.parse(r.authorsJson) as string[],
   year: r.year,
   url: r.url,
+  arxivId: r.arxivId,
+  doi: r.doi,
   kind: r.kind,
   score: r.score,
   reason: r.reason,
@@ -47,6 +49,8 @@ export class DrizzleSuggestionRepository implements SuggestionRepository {
           authorsJson: JSON.stringify(r.authors),
           year: r.year,
           url: r.url,
+          arxivId: r.arxivId,
+          doi: r.doi,
           kind: r.kind,
           score: r.score,
           reason: r.reason,
@@ -66,6 +70,14 @@ export class DrizzleSuggestionRepository implements SuggestionRepository {
       .where(and(...conds))
       .orderBy(desc(suggestion.score));
     return rows.map(toSuggestion);
+  }
+
+  async findById(userId: string, id: string): Promise<Suggestion | null> {
+    const rows = await this.db
+      .select()
+      .from(suggestion)
+      .where(and(eq(suggestion.userId, userId), eq(suggestion.id, id)));
+    return rows[0] ? toSuggestion(rows[0]) : null;
   }
 
   async markImported(userId: string, id: string): Promise<void> {
