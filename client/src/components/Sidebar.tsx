@@ -108,7 +108,7 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={() => navigate("library")}
-                className="min-w-0 flex-1 text-left font-serif text-[1.15rem] font-semibold tracking-tight text-ink"
+                className="min-w-0 flex-1 text-left text-[1.0625rem] font-semibold tracking-tight text-ink"
               >
                 eyday<span className="text-primary">·paper</span>
               </button>

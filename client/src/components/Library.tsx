@@ -196,7 +196,7 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-4xl px-5 py-7 sm:px-8">
         <div className="mb-7">
-          <h1 className="font-serif text-2xl font-semibold tracking-tight text-ink">Library</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-ink">Library</h1>
           <p className="mt-1 text-sm text-ink-muted">
             リンクや PDF を投げ込むと、自動で整理・蓄積します。
           </p>

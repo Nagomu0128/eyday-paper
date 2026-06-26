@@ -179,7 +179,7 @@ export function Reader({ paperId, onBack }: { paperId: string; onBack: () => voi
           <div className="mx-auto max-w-2xl px-5 py-7 sm:px-8">
             {detail && paper && (
               <header className="mb-7">
-                <h1 className="font-serif text-[1.7rem] font-semibold leading-snug tracking-tight text-ink">
+                <h1 className="text-[1.4rem] font-semibold leading-snug tracking-tight text-ink">
                   {paper.title}
                 </h1>
                 <p className="mt-2 text-sm text-ink-muted">

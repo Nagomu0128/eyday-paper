@@ -83,7 +83,7 @@ export function Settings() {
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-2xl px-5 py-7 sm:px-8">
         <div className="mb-6">
-          <h1 className="font-serif text-2xl font-semibold tracking-tight text-ink">Settings</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-ink">Settings</h1>
           <p className="mt-1 text-sm text-ink-muted">
             プロフィールを設定すると、提案（Suggestions）があなた向けに最適化されます。
           </p>

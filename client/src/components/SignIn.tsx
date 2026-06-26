@@ -16,7 +16,7 @@ export function SignIn() {
             <BrandMark />
           </span>
           <div>
-            <h1 className="font-serif text-2xl font-semibold tracking-tight">
+            <h1 className="text-xl font-semibold tracking-tight">
               eyday<span className="text-primary">·paper</span>
             </h1>
             <p className="text-sm text-ink-muted">論文を読むハードルを下げる</p>
