@@ -1,27 +1,21 @@
 import { useState } from "react";
-import { api } from "../lib/api";
 import { IconChevronDown, IconChevronRight, IconSparkles, IconSpinner } from "../lib/icons";
-import type { OutputLang, Summary } from "../types";
+import { summaryStore, useSummary } from "../lib/summaryStore";
+import type { OutputLang } from "../types";
 import { Markdown } from "./Markdown";
 
-/** TL;DR + section summaries, generated on demand and cached per language. */
+/**
+ * TL;DR + section summaries, generated on demand and cached per language. State
+ * lives in summaryStore so "生成中…" survives navigating away and back (and the
+ * result is cached client-side), matching the suggestions refresh UX.
+ */
 export function SummaryBox({ paperId, lang }: { paperId: string; lang: OutputLang }) {
-  const [summary, setSummary] = useState<Summary | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(false);
+  const { status, summary } = useSummary(paperId, lang);
   const [open, setOpen] = useState(false);
+  const busy = status === "generating";
+  const error = status === "error";
 
-  const load = async () => {
-    setBusy(true);
-    setError(false);
-    try {
-      setSummary(await api.getSummary(paperId, lang));
-    } catch {
-      setError(true);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const load = () => summaryStore.generate(paperId, lang);
 
   return (
     <section className="overflow-hidden rounded-2xl border border-primary/15 bg-primary-softer">
