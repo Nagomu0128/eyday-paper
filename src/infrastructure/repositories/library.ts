@@ -269,19 +269,24 @@ export class DrizzleChunkRepository implements ChunkRepository {
 
   async bulkCreate(chunks: NewChunk[]): Promise<void> {
     if (chunks.length === 0) return;
-    await this.db.insert(chunk).values(
-      chunks.map((c) => ({
-        id: c.id,
-        userId: c.userId,
-        paperId: c.paperId,
-        idx: c.idx,
-        section: c.section ?? null,
-        page: c.page ?? null,
-        vectorId: c.vectorId ?? null,
-        text: c.text ?? "",
-        charLen: c.charLen ?? 0,
-      })),
-    );
+    // D1 caps bound parameters per query at 100; chunk has 9 columns, so insert
+    // at most 8 rows (72 params) per statement. A single large multi-row insert
+    // (e.g. 50 chunks → 450 params) fails — that left papers un-indexed.
+    for (let i = 0; i < chunks.length; i += 8) {
+      await this.db.insert(chunk).values(
+        chunks.slice(i, i + 8).map((c) => ({
+          id: c.id,
+          userId: c.userId,
+          paperId: c.paperId,
+          idx: c.idx,
+          section: c.section ?? null,
+          page: c.page ?? null,
+          vectorId: c.vectorId ?? null,
+          text: c.text ?? "",
+          charLen: c.charLen ?? 0,
+        })),
+      );
+    }
   }
 
   async listByPaper(userId: string, paperId: string): Promise<Chunk[]> {

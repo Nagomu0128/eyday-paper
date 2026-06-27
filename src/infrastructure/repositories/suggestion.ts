@@ -36,29 +36,33 @@ export class DrizzleSuggestionRepository implements SuggestionRepository {
       .delete(suggestion)
       .where(and(eq(suggestion.userId, userId), eq(suggestion.status, "suggested")));
     if (rows.length === 0) return;
+    // D1 caps bound parameters per query at 100; suggestion has 13 columns, so
+    // insert at most 6 rows (78 params) per statement.
     // onConflictDoNothing: never re-suggest an already imported/dismissed paper.
-    await this.db
-      .insert(suggestion)
-      .values(
-        rows.map((r) => ({
-          id: r.id,
-          userId,
-          externalId: r.externalId,
-          source: r.source,
-          title: r.title,
-          authorsJson: JSON.stringify(r.authors),
-          year: r.year,
-          url: r.url,
-          arxivId: r.arxivId,
-          doi: r.doi,
-          kind: r.kind,
-          score: r.score,
-          reason: r.reason,
-        })),
-      )
-      .onConflictDoNothing({
-        target: [suggestion.userId, suggestion.source, suggestion.externalId],
-      });
+    for (let i = 0; i < rows.length; i += 6) {
+      await this.db
+        .insert(suggestion)
+        .values(
+          rows.slice(i, i + 6).map((r) => ({
+            id: r.id,
+            userId,
+            externalId: r.externalId,
+            source: r.source,
+            title: r.title,
+            authorsJson: JSON.stringify(r.authors),
+            year: r.year,
+            url: r.url,
+            arxivId: r.arxivId,
+            doi: r.doi,
+            kind: r.kind,
+            score: r.score,
+            reason: r.reason,
+          })),
+        )
+        .onConflictDoNothing({
+          target: [suggestion.userId, suggestion.source, suggestion.externalId],
+        });
+    }
   }
 
   async list(userId: string, kind?: SuggestionKind): Promise<Suggestion[]> {
