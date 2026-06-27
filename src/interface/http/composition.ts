@@ -6,7 +6,12 @@ import { GenerateSuggestions } from "../../application/suggestion/generate-sugge
 import { SummarizePaper } from "../../application/summary/summarize-paper";
 import { createDb } from "../../db/client";
 import type { ProcessJob } from "../../domain/ingestion/ports";
-import type { FolderRepository, PaperRepository, TagRepository } from "../../domain/library/types";
+import type {
+  ChunkRepository,
+  FolderRepository,
+  PaperRepository,
+  TagRepository,
+} from "../../domain/library/types";
 import type { ObjectStorage } from "../../domain/storage/object-storage";
 import { AiGatewayLlmClient, buildGatewayBaseUrl } from "../../infrastructure/ai/ai-gateway";
 import type { LlmClient } from "../../infrastructure/ai/llm-client";
@@ -99,6 +104,7 @@ export interface LibraryDeps {
   papers: PaperRepository;
   tags: TagRepository;
   folders: FolderRepository;
+  chunks: ChunkRepository;
   storage: ObjectStorage;
 }
 
@@ -109,9 +115,14 @@ export const buildLibrary = (env: Env): LibraryDeps => {
     papers: new DrizzlePaperRepository(db),
     tags: new DrizzleTagRepository(db),
     folders: new DrizzleFolderRepository(db),
+    chunks: new DrizzleChunkRepository(db),
     storage: new R2ObjectStorage(env.BUCKET),
   };
 };
+
+/** Producer for the processing queue (used to (re)enqueue heavy ingestion work). */
+export const buildIngestionQueue = (env: Env): CloudflareIngestionQueue =>
+  new CloudflareIngestionQueue(env.INGEST_QUEUE as Queue<ProcessJob>);
 
 export const buildAnswerQuestion = (env: Env): AnswerQuestion => {
   const db = createDb(env.DB);

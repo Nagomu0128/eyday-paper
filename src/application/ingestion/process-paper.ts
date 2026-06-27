@@ -141,5 +141,7 @@ export class ProcessPaper {
         console.warn("embedding/indexing failed", paperId, err);
       }
     }
+
+    console.info("paper processed", { paperId, chunks: textChunks.length });
   }
 }

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import type { Database } from "../../db/client";
 import { chunk, folder, note, paper, paperTag, tag } from "../../db/schema";
 import type {
@@ -302,6 +302,14 @@ export class DrizzleChunkRepository implements ChunkRepository {
 
   async deleteByPaper(userId: string, paperId: string): Promise<void> {
     await this.db.delete(chunk).where(and(eq(chunk.userId, userId), eq(chunk.paperId, paperId)));
+  }
+
+  async countByPaper(userId: string, paperId: string): Promise<number> {
+    const rows = await this.db
+      .select({ value: count() })
+      .from(chunk)
+      .where(and(eq(chunk.userId, userId), eq(chunk.paperId, paperId)));
+    return rows[0]?.value ?? 0;
   }
 }
 

@@ -8,10 +8,10 @@ import {
   buildAnswerQuestion,
   buildExplainSelection,
   buildGenerateSuggestions,
+  buildIngestionQueue,
   buildIngestPaper,
   buildLibrary,
   buildNoteRepo,
-  buildProcessPaper,
   buildProfileRepo,
   buildQaHistory,
   buildSuggestionRepo,
@@ -101,7 +101,7 @@ const routes = app
   })
   // Paper detail with tags + home folder.
   .get("/api/papers/:id", requireAuth, async (c) => {
-    const { papers, tags, folders } = buildLibrary(c.env);
+    const { papers, tags, folders, chunks } = buildLibrary(c.env);
     const userId = c.get("ctx").userId;
     const id = c.req.param("id");
     const paper = await papers.findById(userId, id);
@@ -110,7 +110,9 @@ const routes = app
     const folder = paper.primaryFolderId
       ? await folders.findById(userId, paper.primaryFolderId)
       : null;
-    return c.json({ paper, tags: paperTags, folder });
+    // `indexed` = has searchable chunks; drives the reader's re-index affordance.
+    const indexed = (await chunks.countByPaper(userId, id)) > 0;
+    return c.json({ paper, tags: paperTags, folder, indexed });
   })
   // Structured reflow text (R2). 409 until processing has produced it.
   .get("/api/papers/:id/text", requireAuth, async (c) => {
@@ -284,7 +286,9 @@ const routes = app
     const id = c.req.param("id");
     const paper = await buildLibrary(c.env).papers.findById(userId, id);
     if (!paper) throw new AppError("not_found", "paper not found");
-    await buildProcessPaper(c.env).execute({ userId, paperId: id });
+    // Heavy work (extract → chunk → embed → index) runs in the queue consumer,
+    // which has generous limits + retries; the client polls `indexed`.
+    await buildIngestionQueue(c.env).enqueueProcess({ userId, paperId: id });
     return c.json({ ok: true });
   })
   // Notes / highlights.

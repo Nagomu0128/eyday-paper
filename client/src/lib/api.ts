@@ -87,7 +87,9 @@ export const api = {
     return res.json() as Promise<{ paperId: string; deduped: boolean }>;
   },
 
-  async getPaper(id: string): Promise<{ paper: Paper; tags: Tag[]; folder: Folder | null }> {
+  async getPaper(
+    id: string,
+  ): Promise<{ paper: Paper; tags: Tag[]; folder: Folder | null; indexed: boolean }> {
     return asJson(await fetch(`/api/papers/${id}`));
   },
 
