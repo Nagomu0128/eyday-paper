@@ -224,7 +224,7 @@ export function Reader({ paperId, onBack }: { paperId: string; onBack: () => voi
 
         {/* Scrollable reading content */}
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-2xl px-5 py-7 sm:px-8">
+          <div className="mx-auto max-w-3xl px-5 py-7 sm:px-8">
             {detail && paper && (
               <header className="mb-7">
                 <h1 className="text-[1.4rem] font-semibold leading-snug tracking-tight text-ink">
