@@ -7,6 +7,7 @@ import type {
 } from "../../domain/suggestion/ports";
 import { parseLlmJson } from "../ai/json";
 import type { LlmClient } from "../ai/llm-client";
+import { fence, UNTRUSTED_DATA_NOTE } from "../ai/prompt";
 
 const line = (label: string, values: string[] | undefined): string =>
   values && values.length > 0 ? `${label}: ${values.join(", ")}` : `${label}: (none)`;
@@ -64,11 +65,12 @@ export class LlmSuggestionRanker implements SuggestionRanker {
         {
           role: "system",
           content:
-            'Rank candidate papers for a reader, personalized to their profile. Use ONLY the provided candidates; never invent papers or ids. Favor papers matching the reader\'s interests, fields, organizations, and goal; de-prioritize anything in "Avoid". Return strict JSON {"suggestions":[{"externalId","source","kind":"classic"|"recent","score":0..1,"reason":string}]}. "classic" = seminal/foundational and relevant; "recent" = new and relevant. Reasons are one sentence and should reference why it fits this reader. Up to 12.',
+            'Rank candidate papers for a reader, personalized to their profile. Use ONLY the provided candidates; never invent papers or ids. Favor papers matching the reader\'s interests, fields, organizations, and goal; de-prioritize anything in "Avoid". Return strict JSON {"suggestions":[{"externalId","source","kind":"classic"|"recent","score":0..1,"reason":string}]}. "classic" = seminal/foundational and relevant; "recent" = new and relevant. Reasons are one sentence and should reference why it fits this reader. Up to 12. ' +
+            UNTRUSTED_DATA_NOTE,
         },
         {
           role: "user",
-          content: `Reader profile:\n${profileText}\n\nCandidates:\n${JSON.stringify(list)}`,
+          content: `Reader profile:\n${fence(profileText)}\n\nCandidates:\n${JSON.stringify(list)}`,
         },
       ],
     });

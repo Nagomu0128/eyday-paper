@@ -25,6 +25,7 @@ import { CloudflareIngestionQueue } from "../../infrastructure/ingestion/queue";
 import { HttpSourceFetcher } from "../../infrastructure/ingestion/source-fetcher";
 import { CompositeTextExtractor } from "../../infrastructure/ingestion/text-extractor";
 import { LlmAnswerGenerator } from "../../infrastructure/qa/llm-answer-generator";
+import { KvRateLimiter } from "../../infrastructure/ratelimit/kv-rate-limiter";
 import { LlmExplainer } from "../../infrastructure/reading/llm-explainer";
 import {
   DrizzleChunkRepository,
@@ -117,6 +118,7 @@ export const buildExplainSelection = (env: Env): ExplainSelection =>
   new ExplainSelection({
     papers: new DrizzlePaperRepository(createDb(env.DB)),
     explainer: new LlmExplainer(openaiGateway(env), GPT_MINI),
+    limiter: new KvRateLimiter(env.KV),
   });
 
 export interface LibraryDeps {
@@ -154,6 +156,7 @@ export const buildAnswerQuestion = (env: Env): AnswerQuestion => {
     generator: new LlmAnswerGenerator(openaiGateway(env), GPT_MID),
     history: new DrizzleQaMessageRepository(db),
     sessions: new DrizzleQaSessionRepository(db),
+    limiter: new KvRateLimiter(env.KV),
   });
 };
 
@@ -182,6 +185,7 @@ export const buildGenerateSuggestions = (env: Env): GenerateSuggestions => {
     ]),
     ranker: new LlmSuggestionRanker(openaiGateway(env), GPT_MID),
     suggestions: new DrizzleSuggestionRepository(db),
+    limiter: new KvRateLimiter(env.KV),
   });
 };
 

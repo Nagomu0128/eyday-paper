@@ -13,7 +13,7 @@ import {
   DrizzleQaMessageRepository,
   DrizzleQaSessionRepository,
 } from "../src/infrastructure/repositories/qa";
-import { seedUser } from "./helpers";
+import { allowAllLimiter, seedUser } from "./helpers";
 
 const stubEmbedder: Embedder = { embed: (t) => Promise.resolve(t.map(() => [0.1, 0.2, 0.3])) };
 const emptyIndex: VectorIndex = {
@@ -46,6 +46,7 @@ const build = () => {
     generator,
     history: new DrizzleQaMessageRepository(db),
     sessions: new DrizzleQaSessionRepository(db),
+    limiter: allowAllLimiter,
   };
   return { deps, generator };
 };

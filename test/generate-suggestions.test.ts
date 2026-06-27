@@ -11,7 +11,7 @@ import type {
 import { DrizzlePaperRepository } from "../src/infrastructure/repositories/library";
 import { DrizzleProfileRepository } from "../src/infrastructure/repositories/profile";
 import { DrizzleSuggestionRepository } from "../src/infrastructure/repositories/suggestion";
-import { seedUser } from "./helpers";
+import { allowAllLimiter, seedUser } from "./helpers";
 
 const ext = (over: Partial<ExternalPaper>): ExternalPaper => ({
   externalId: "e",
@@ -73,6 +73,7 @@ describe("GenerateSuggestions", () => {
       source: new StubSource(candidates),
       ranker: new StubRanker(),
       suggestions: repo,
+      limiter: allowAllLimiter,
     });
 
     const count = await uc.execute(userId);
@@ -97,6 +98,7 @@ describe("GenerateSuggestions", () => {
       source: new StubSource(candidates),
       ranker: new StubRanker(),
       suggestions: repo,
+      limiter: allowAllLimiter,
     });
 
     await uc.execute(userId);
@@ -137,6 +139,7 @@ describe("GenerateSuggestions", () => {
       source: new StubSource(candidates),
       ranker: throwingRanker,
       suggestions: repo,
+      limiter: allowAllLimiter,
     });
 
     const count = await uc.execute(userId);

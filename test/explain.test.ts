@@ -6,7 +6,7 @@ import type { Explainer, ExplainInput, Explanation } from "../src/domain/reading
 import type { LlmClient, LlmCompleteOptions } from "../src/infrastructure/ai/llm-client";
 import { LlmExplainer } from "../src/infrastructure/reading/llm-explainer";
 import { DrizzlePaperRepository } from "../src/infrastructure/repositories/library";
-import { seedUser } from "./helpers";
+import { allowAllLimiter, seedUser } from "./helpers";
 
 class StubExplainer implements Explainer {
   lastInput?: ExplainInput;
@@ -31,7 +31,7 @@ describe("ExplainSelection", () => {
       abstract: null,
     });
     const explainer = new StubExplainer();
-    const uc = new ExplainSelection({ papers, explainer });
+    const uc = new ExplainSelection({ papers, explainer, limiter: allowAllLimiter });
 
     const res = await uc.execute({
       userId: u1,

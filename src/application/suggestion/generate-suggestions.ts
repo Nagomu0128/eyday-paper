@@ -1,5 +1,6 @@
 import type { ProfileRepository } from "../../domain/identity/profile";
 import type { PaperRepository } from "../../domain/library/types";
+import type { RateLimiter } from "../../domain/ratelimit/ports";
 import type {
   ExternalPaper,
   NewSuggestion,
@@ -8,6 +9,7 @@ import type {
   SuggestionRepository,
   SuggestionSource,
 } from "../../domain/suggestion/ports";
+import { AppError } from "../../shared/errors";
 import { newId } from "../../shared/id";
 
 export interface GenerateSuggestionsDeps {
@@ -16,7 +18,11 @@ export interface GenerateSuggestionsDeps {
   source: SuggestionSource;
   ranker: SuggestionRanker;
   suggestions: SuggestionRepository;
+  limiter: RateLimiter;
 }
+
+/** Total suggestion generations per user per day, INCLUDING the daily cron run. */
+const SUGGEST_DAILY_LIMIT = 2;
 
 const keyOf = (p: { source: string; externalId: string }) => `${p.source}:${p.externalId}`;
 
@@ -52,6 +58,13 @@ export class GenerateSuggestions {
 
   async execute(userId: string, opts?: { query?: string }): Promise<number> {
     const d = this.deps;
+
+    // 2/day per user, counting the cron run — a cost backstop on the external
+    // API fan-out + GPT ranker. The cron catches this and skips; the route 429s.
+    const limit = await d.limiter.checkAndIncrement(userId, "suggestions", SUGGEST_DAILY_LIMIT);
+    if (!limit.allowed) {
+      throw new AppError("rate_limited", "本日の提案更新の上限に達しました。");
+    }
 
     const profile = await d.profiles.get(userId);
     const library = await d.papers.list(userId, { limit: 500 });

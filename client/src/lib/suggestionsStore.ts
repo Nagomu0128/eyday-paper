@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { api } from "./api";
+import { ApiError, api } from "./api";
 
 /**
  * Module-scoped store for the suggestion refresh job. Living above the component
@@ -46,8 +46,14 @@ export const suggestionsStore = {
     try {
       const { count } = await api.refreshSuggestions(query);
       setState({ refreshing: false, lastCount: count, finishedAt: Date.now() });
-    } catch {
-      setState({ refreshing: false, error: "提案の更新に失敗しました" });
+    } catch (err) {
+      const limited = err instanceof ApiError && err.status === 429;
+      setState({
+        refreshing: false,
+        error: limited
+          ? "本日の更新上限（2回/日、自動更新を含む）に達しました。"
+          : "提案の更新に失敗しました",
+      });
     }
   },
 };

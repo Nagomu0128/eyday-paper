@@ -5,6 +5,7 @@ import { profile, user } from "./db/schema";
 import type { ProcessJob } from "./domain/ingestion/ports";
 import { app } from "./interface/http/app";
 import { buildGenerateSuggestions, buildProcessPaper } from "./interface/http/composition";
+import { AppError } from "./shared/errors";
 
 /**
  * Single Worker entry. `fetch` serves the Hono API (static assets are served by
@@ -41,6 +42,8 @@ export default {
       try {
         await generate.execute(u.id);
       } catch (error) {
+        // Already at the daily cap (e.g. the user manually refreshed): skip quietly.
+        if (error instanceof AppError && error.kind === "rate_limited") continue;
         console.error("suggestion batch failed for user", u.id, error);
       }
     }
