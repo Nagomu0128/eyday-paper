@@ -82,6 +82,7 @@ export interface Note {
   body: string | null;
   rangeJson: string | null;
   createdAt: string;
+  updatedAt: string | null;
 }
 
 export interface Suggestion {

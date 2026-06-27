@@ -110,6 +110,7 @@ export interface Note {
   rangeJson: string | null;
   body: string | null;
   createdAt: Date;
+  updatedAt: Date | null;
 }
 
 export interface NewNote {
@@ -121,9 +122,15 @@ export interface NewNote {
   body?: string | null;
 }
 
+export interface NotePatch {
+  body?: string | null;
+}
+
 export interface NoteRepository {
   create(note: NewNote): Promise<Note>;
   listByPaper(userId: string, paperId: string): Promise<Note[]>;
+  /** Edit a note's body (user-scoped). Stamps updatedAt. */
+  update(userId: string, id: string, patch: NotePatch): Promise<void>;
   delete(userId: string, id: string): Promise<void>;
 }
 

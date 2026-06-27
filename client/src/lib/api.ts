@@ -198,6 +198,14 @@ export const api = {
     ).note;
   },
 
+  async updateNote(noteId: string, body: string): Promise<void> {
+    await fetch(`/api/notes/${noteId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ body }),
+    });
+  },
+
   async deleteNote(noteId: string): Promise<void> {
     await fetch(`/api/notes/${noteId}`, { method: "DELETE" });
   },

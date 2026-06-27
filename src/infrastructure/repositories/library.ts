@@ -11,6 +11,7 @@ import type {
   NewNote,
   NewPaper,
   Note,
+  NotePatch,
   NoteRepository,
   Paper,
   PaperPatch,
@@ -378,6 +379,15 @@ export class DrizzleNoteRepository implements NoteRepository {
       .from(note)
       .where(and(eq(note.userId, userId), eq(note.paperId, paperId)))
       .orderBy(desc(note.createdAt));
+  }
+
+  async update(userId: string, id: string, patch: NotePatch): Promise<void> {
+    const set: Partial<typeof note.$inferInsert> = { updatedAt: new Date() };
+    if (patch.body !== undefined) set.body = patch.body;
+    await this.db
+      .update(note)
+      .set(set)
+      .where(and(eq(note.userId, userId), eq(note.id, id)));
   }
 
   async delete(userId: string, id: string): Promise<void> {
