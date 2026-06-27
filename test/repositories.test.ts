@@ -123,6 +123,29 @@ describe("repositories force user_id scoping", () => {
     expect(await chunks.countByPaper(u, p.id)).toBe(25);
   });
 
+  it("chunk: replaceForPaper is idempotent (replaces, no growth, drops stale)", async () => {
+    const db = createDb(env.DB);
+    const papers = new DrizzlePaperRepository(db);
+    const chunks = new DrizzleChunkRepository(db);
+    const u = await seedUser();
+    const p = await papers.create({ id: crypto.randomUUID(), userId: u, title: "X" });
+    const make = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        id: crypto.randomUUID(),
+        userId: u,
+        paperId: p.id,
+        idx: i,
+        text: `c${i}`,
+        charLen: 2,
+      }));
+
+    await chunks.replaceForPaper(u, p.id, make(20));
+    expect(await chunks.countByPaper(u, p.id)).toBe(20);
+    // Re-run with fewer rows: replaced atomically, not appended; stale rows gone.
+    await chunks.replaceForPaper(u, p.id, make(5));
+    expect(await chunks.countByPaper(u, p.id)).toBe(5);
+  });
+
   it("profile: upsert merges fields and preserves prior values", async () => {
     const profiles = new DrizzleProfileRepository(createDb(env.DB));
     const u = await seedUser();

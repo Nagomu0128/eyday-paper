@@ -100,13 +100,11 @@ export class ProcessPaper {
       }
     }
 
-    // 4. Chunk (idempotent: drop prior chunks/vectors first).
+    // 4. Chunk — atomically replace prior chunks in one D1 transaction, so a
+    //    partial failure or an overlapping re-run can't leave a half-written
+    //    index. The unique (paper_id, idx) index still prevents duplicates.
     const textChunks = chunkDocument(doc);
     const previous = await d.chunks.listByPaper(userId, paperId);
-    if (previous.length > 0) {
-      await d.vectorIndex.deleteVectors(previous.map((c) => c.id)).catch(() => {});
-      await d.chunks.deleteByPaper(userId, paperId);
-    }
     const records = textChunks.map((tc) => {
       const id = newId();
       return {
@@ -120,7 +118,11 @@ export class ProcessPaper {
         charLen: tc.charLen,
       };
     });
-    await d.chunks.bulkCreate(records);
+    await d.chunks.replaceForPaper(userId, paperId, records);
+    // Drop the previous run's vectors (Vectorize is outside the D1 transaction).
+    if (previous.length > 0) {
+      await d.vectorIndex.deleteVectors(previous.map((c) => c.id)).catch(() => {});
+    }
 
     // 5. Embed + index (Vectorize). Vector id = chunk id. Non-fatal: chunks are
     //    already in D1, so the reader works and Q&A can degrade gracefully.

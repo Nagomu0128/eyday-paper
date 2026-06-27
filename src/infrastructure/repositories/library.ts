@@ -289,6 +289,38 @@ export class DrizzleChunkRepository implements ChunkRepository {
     }
   }
 
+  /**
+   * Atomically replace a paper's chunks: delete + all insert batches run in one
+   * D1 `batch` (a transaction). Idempotent — a partial failure or an overlapping
+   * re-run can't leave a half-written index; the unique (paper_id, idx) index
+   * still guards against duplicates. Inserts stay ≤8 rows for the 100-param cap.
+   */
+  async replaceForPaper(userId: string, paperId: string, rows: NewChunk[]): Promise<void> {
+    const del = this.db
+      .delete(chunk)
+      .where(and(eq(chunk.userId, userId), eq(chunk.paperId, paperId)));
+    if (rows.length === 0) {
+      await del;
+      return;
+    }
+    const inserts = Array.from({ length: Math.ceil(rows.length / 8) }, (_, b) =>
+      this.db.insert(chunk).values(
+        rows.slice(b * 8, b * 8 + 8).map((c) => ({
+          id: c.id,
+          userId: c.userId,
+          paperId: c.paperId,
+          idx: c.idx,
+          section: c.section ?? null,
+          page: c.page ?? null,
+          vectorId: c.vectorId ?? null,
+          text: c.text ?? "",
+          charLen: c.charLen ?? 0,
+        })),
+      ),
+    );
+    await this.db.batch([del, ...inserts]);
+  }
+
   async listByPaper(userId: string, paperId: string): Promise<Chunk[]> {
     return this.db
       .select()
