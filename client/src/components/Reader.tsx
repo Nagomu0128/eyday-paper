@@ -33,6 +33,7 @@ interface Detail {
   paper: Paper;
   tags: Tag[];
   folder: Folder | null;
+  indexed: boolean;
 }
 
 interface KeyedDoc {
@@ -122,12 +123,23 @@ export function Reader({ paperId, onBack }: { paperId: string; onBack: () => voi
 
   const reindex = async () => {
     setReindexing(true);
-    setReindexMsg(null);
+    setReindexMsg("再処理を開始しました。索引化を待っています…");
     try {
       await api.reprocess(paperId);
-      setReindexMsg("検索インデックスを再構築しました。右の AI チャットで質問できます。");
-      const refreshed = await api.getText(paperId).catch(() => null);
-      setDoc(refreshed ? keyDoc(refreshed) : null);
+      // The queue consumer processes asynchronously; poll until chunks exist.
+      const start = Date.now();
+      while (Date.now() - start < 90_000) {
+        await new Promise((r) => setTimeout(r, 4000));
+        const d = await api.getPaper(paperId).catch(() => null);
+        if (d?.indexed) {
+          setDetail(d);
+          setReindexMsg(null);
+          const refreshed = await api.getText(paperId).catch(() => null);
+          setDoc(refreshed ? keyDoc(refreshed) : null);
+          return;
+        }
+      }
+      setReindexMsg("索引化に時間がかかっています。少し待ってから画面を開き直してください。");
     } catch {
       setReindexMsg("再処理に失敗しました。少し待ってから再度お試しください。");
     } finally {
@@ -163,15 +175,6 @@ export function Reader({ paperId, onBack }: { paperId: string; onBack: () => voi
               { value: "en", label: "EN" },
             ]}
           />
-          <IconButton
-            label="検索インデックスを再構築（再処理）"
-            size="sm"
-            variant="secondary"
-            onClick={reindex}
-            disabled={reindexing}
-          >
-            {reindexing ? <IconSpinner /> : <IconRefresh />}
-          </IconButton>
           {paper?.pdfR2Key && (
             <button
               type="button"
@@ -201,9 +204,21 @@ export function Reader({ paperId, onBack }: { paperId: string; onBack: () => voi
           </button>
         </header>
 
-        {reindexMsg && (
-          <div className="shrink-0 border-b border-line bg-primary-softer px-5 py-2 text-[0.82rem] text-primary-ink">
-            {reindexMsg}
+        {detail && !detail.indexed && (
+          <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-accent/30 bg-accent-soft px-5 py-2 text-[0.82rem] text-accent-ink">
+            <span>
+              この論文はまだ検索用に索引化されていません（AI チャットの質問応答に必要です）。
+            </span>
+            <button
+              type="button"
+              onClick={reindex}
+              disabled={reindexing}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1 font-medium text-white transition-colors hover:brightness-95 disabled:opacity-50"
+            >
+              {reindexing ? <IconSpinner /> : <IconRefresh />}
+              {reindexing ? "再処理中…" : "再処理"}
+            </button>
+            {reindexMsg && <span className="text-accent-ink/80">{reindexMsg}</span>}
           </div>
         )}
 
