@@ -187,4 +187,35 @@ describe("ProcessPaper pipeline", () => {
     expect(await d.tags.listForPaper(userId, paper.id)).toHaveLength(0); // tagging skipped
     expect(d.vectorIndex.upserts).toHaveLength(0); // embedding skipped
   });
+
+  it("falls back to a tag-derived folder when the LLM folder-assigner fails", async () => {
+    const db = createDb(env.DB);
+    const d = {
+      papers: new DrizzlePaperRepository(db),
+      folders: new DrizzleFolderRepository(db),
+      tags: new DrizzleTagRepository(db),
+      chunks: new DrizzleChunkRepository(db),
+      storage: new R2ObjectStorage(env.BUCKET),
+      extractor: new StubExtractor(),
+      tagger: new StubTagger(), // [{nlp, topic}, {transformers, method}]
+      folderAssigner: { assign: () => Promise.reject(new Error("gateway 429")) } as FolderAssigner,
+      embedder: new StubEmbedder(),
+      vectorIndex: new RecordingIndex(),
+    };
+    const userId = await seedUser();
+    const paper = await d.papers.create({
+      id: crypto.randomUUID(),
+      userId,
+      title: "X",
+      abstract: "a",
+    });
+
+    await new ProcessPaper(d).execute({ userId, paperId: paper.id });
+
+    const updated = await d.papers.findById(userId, paper.id);
+    expect(updated?.primaryFolderId).toBeTruthy(); // never left uncategorized
+    const folders = await d.folders.list(userId);
+    // Fallback uses the top tag (StubTagger's first is "nlp").
+    expect(folders.find((f) => f.id === updated?.primaryFolderId)?.name).toBe("nlp");
+  });
 });
