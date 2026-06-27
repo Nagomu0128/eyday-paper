@@ -14,8 +14,20 @@ const decode = (s: string): string =>
     .replace(/&#39;/g, "'")
     .replace(/&amp;/g, "&");
 
+// arXiv/ar5iv HTML carries the source LaTeX in each `<math alttext="…">` attribute.
+// Recover it as `$…$` / `$$…$$` (display) so the reader can render real math (KaTeX)
+// instead of the stripped MathML text. Entities in alttext are left raw here so the
+// tag stripper below can't eat a literal `<`; the shared `decode` resolves them.
+const MATH_RE = /<math\b([^>]*)>[\s\S]*?<\/math>/gi;
+const mathToTex = (html: string): string =>
+  html.replace(MATH_RE, (_full, attrs: string) => {
+    const tex = (/\balttext="([^"]*)"/i.exec(attrs)?.[1] ?? "").trim();
+    if (!tex) return " ";
+    return /\bdisplay="block"/i.test(attrs) ? ` $$${tex}$$ ` : ` $${tex}$ `;
+  });
+
 const stripTags = (s: string): string =>
-  decode(s.replace(/<[^>]+>/g, " "))
+  decode(mathToTex(s).replace(/<[^>]+>/g, " "))
     .replace(/\s+/g, " ")
     .replace(/\s+([.,;:!?)])/g, "$1")
     .trim();

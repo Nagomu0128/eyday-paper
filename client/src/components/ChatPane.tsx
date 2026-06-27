@@ -2,6 +2,7 @@ import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { IconChat, IconQuote, IconSend, IconSpinner, IconWand } from "../lib/icons";
 import type { OutputLang } from "../types";
+import { Markdown } from "./Markdown";
 
 export interface SelectionContext {
   text: string;
@@ -149,9 +150,9 @@ export function ChatPane({
                 </p>
               ) : (
                 <>
-                  <p className="whitespace-pre-wrap text-[0.875rem] leading-6 text-ink">
-                    {m.content}
-                  </p>
+                  <div className="text-[0.875rem] leading-6 text-ink">
+                    <Markdown>{m.content}</Markdown>
+                  </div>
                   {m.grounded === false && (
                     <p className="mt-2 text-[0.74rem] text-accent-ink">
                       ※ 取得した文脈に根拠が見つかりませんでした。
