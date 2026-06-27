@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Library } from "./components/Library";
 import { Reader } from "./components/Reader";
 import { Settings } from "./components/Settings";
@@ -13,18 +14,35 @@ import { useFaviconSpinner } from "./lib/useFaviconSpinner";
 import { useMediaQuery } from "./lib/useMediaQuery";
 import type { Me } from "./types";
 
-type View = { name: NavId } | { name: "reader"; paperId: string };
 type Auth = "loading" | "in" | "out";
 
-const navIdFor = (view: View): NavId => (view.name === "reader" ? "library" : view.name);
+const navIdForPath = (pathname: string): NavId =>
+  pathname.startsWith("/suggestions")
+    ? "suggestions"
+    : pathname.startsWith("/settings")
+      ? "settings"
+      : "library";
+
+const pathForNav = (id: NavId): string => (id === "library" ? "/" : `/${id}`);
+
+/** Reader route: paperId comes from the URL so reload/deep-link works. */
+function ReaderRoute() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  if (!id) return <Navigate to="/" replace />;
+  // Prefer in-app back; fall back to the library when there's no history (deep link).
+  const onBack = () => (window.history.length > 1 ? navigate(-1) : navigate("/"));
+  return <Reader paperId={id} onBack={onBack} />;
+}
 
 export default function App() {
   const [auth, setAuth] = useState<Auth>("loading");
   const [me, setMe] = useState<Me | null>(null);
-  const [view, setView] = useState<View>({ name: "library" });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const navigate = useNavigate();
+  const location = useLocation();
   const { refreshing } = useSuggestionsStatus();
 
   useEffect(() => {
@@ -66,12 +84,12 @@ export default function App() {
   }
   if (auth === "out") return <SignIn />;
 
-  const go = (name: NavId) => setView({ name });
+  const go = (id: NavId) => navigate(pathForNav(id));
 
   return (
     <div className="flex h-dvh overflow-hidden bg-paper text-ink">
       <Sidebar
-        active={navIdFor(view)}
+        active={navIdForPath(location.pathname)}
         onNavigate={go}
         me={me}
         collapsed={collapsed}
@@ -95,14 +113,16 @@ export default function App() {
         </header>
 
         <main className="min-h-0 flex-1 overflow-hidden">
-          {view.name === "library" && (
-            <Library onOpen={(paperId) => setView({ name: "reader", paperId })} />
-          )}
-          {view.name === "suggestions" && <Suggestions />}
-          {view.name === "settings" && <Settings />}
-          {view.name === "reader" && (
-            <Reader paperId={view.paperId} onBack={() => setView({ name: "library" })} />
-          )}
+          <Routes>
+            <Route
+              path="/"
+              element={<Library onOpen={(paperId) => navigate(`/paper/${paperId}`)} />}
+            />
+            <Route path="/suggestions" element={<Suggestions />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/paper/:id" element={<ReaderRoute />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </main>
       </div>
     </div>
