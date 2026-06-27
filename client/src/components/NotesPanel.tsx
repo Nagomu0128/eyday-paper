@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { api } from "../lib/api";
-import { IconNote, IconTrash } from "../lib/icons";
+import { IconCheck, IconClose, IconNote, IconPencil, IconTrash } from "../lib/icons";
 import type { Note } from "../types";
 import { EmptyState } from "./ui";
 
@@ -8,6 +8,8 @@ import { EmptyState } from "./ui";
 export function NotesPanel({ paperId }: { paperId: string }) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [body, setBody] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editBody, setEditBody] = useState("");
 
   const load = () => {
     api
@@ -26,6 +28,22 @@ export function NotesPanel({ paperId }: { paperId: string }) {
     load();
   };
 
+  const startEdit = (n: Note) => {
+    setEditingId(n.id);
+    setEditBody(n.body ?? "");
+  };
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditBody("");
+  };
+  const saveEdit = async (id: string) => {
+    const b = editBody.trim();
+    if (!b) return;
+    await api.updateNote(id, b);
+    cancelEdit();
+    load();
+  };
+
   const remove = async (id: string) => {
     await api.deleteNote(id);
     load();
@@ -41,24 +59,67 @@ export function NotesPanel({ paperId }: { paperId: string }) {
             description="読みながら気づきや疑問を書き留めましょう。"
           />
         ) : (
-          notes.map((n) => (
-            <div
-              key={n.id}
-              className="group flex items-start justify-between gap-3 rounded-xl border border-line bg-surface px-3 py-2.5 shadow-card"
-            >
-              <span className="whitespace-pre-wrap text-[0.85rem] leading-6 text-ink">
-                {n.body}
-              </span>
-              <button
-                type="button"
-                onClick={() => remove(n.id)}
-                aria-label="削除"
-                className="shrink-0 rounded-md p-1 text-ink-faint opacity-0 transition-opacity hover:bg-danger-soft hover:text-danger group-hover:opacity-100"
+          notes.map((n) =>
+            editingId === n.id ? (
+              <div
+                key={n.id}
+                className="rounded-xl border border-primary/40 bg-surface px-3 py-2.5 shadow-card ring-2 ring-primary/15"
               >
-                <IconTrash className="text-[1rem]" />
-              </button>
-            </div>
-          ))
+                <textarea
+                  // biome-ignore lint/a11y/noAutofocus: focus the field the user chose to edit
+                  autoFocus
+                  value={editBody}
+                  onChange={(e) => setEditBody(e.target.value)}
+                  rows={3}
+                  className="w-full resize-none bg-transparent text-[0.85rem] leading-6 text-ink outline-none"
+                />
+                <div className="mt-2 flex items-center justify-end gap-1.5">
+                  <button
+                    type="button"
+                    onClick={cancelEdit}
+                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[0.78rem] text-ink-muted transition-colors hover:bg-surface-muted"
+                  >
+                    <IconClose /> 取消
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => saveEdit(n.id)}
+                    disabled={!editBody.trim()}
+                    className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1 text-[0.78rem] font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
+                  >
+                    <IconCheck /> 保存
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                key={n.id}
+                className="group flex items-start justify-between gap-3 rounded-xl border border-line bg-surface px-3 py-2.5 shadow-card"
+              >
+                <span className="whitespace-pre-wrap text-[0.85rem] leading-6 text-ink">
+                  {n.body}
+                </span>
+                <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                  <button
+                    type="button"
+                    onClick={() => startEdit(n)}
+                    aria-label="編集"
+                    className="rounded-md p-1 text-ink-faint transition-colors hover:bg-primary-soft hover:text-primary"
+                  >
+                    <IconPencil className="text-[1rem]" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => remove(n.id)}
+                    aria-label="削除"
+                    className="rounded-md p-1 text-ink-faint transition-colors hover:bg-danger-soft hover:text-danger"
+                  >
+                    <IconTrash className="text-[1rem]" />
+                  </button>
+                </div>
+              </div>
+            ),
+          )
         )}
       </div>
 

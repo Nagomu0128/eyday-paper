@@ -34,4 +34,48 @@ describe("DrizzleNoteRepository", () => {
     await notes.delete(u1, n.id);
     expect(await notes.listByPaper(u1, p.id)).toHaveLength(0);
   });
+
+  it("edits a note's body and stamps updatedAt", async () => {
+    const db = createDb(env.DB);
+    const papers = new DrizzlePaperRepository(db);
+    const notes = new DrizzleNoteRepository(db);
+    const u = await seedUser();
+    const p = await papers.create({ id: crypto.randomUUID(), userId: u, title: "P" });
+    const n = await notes.create({
+      id: crypto.randomUUID(),
+      userId: u,
+      paperId: p.id,
+      kind: "note",
+      body: "first",
+    });
+    expect(n.updatedAt).toBeNull();
+
+    await notes.update(u, n.id, { body: "edited" });
+
+    const after = (await notes.listByPaper(u, p.id)).find((x) => x.id === n.id);
+    expect(after?.body).toBe("edited");
+    expect(after?.updatedAt).toBeInstanceOf(Date);
+  });
+
+  it("does not edit another tenant's note", async () => {
+    const db = createDb(env.DB);
+    const papers = new DrizzlePaperRepository(db);
+    const notes = new DrizzleNoteRepository(db);
+    const owner = await seedUser();
+    const attacker = await seedUser();
+    const p = await papers.create({ id: crypto.randomUUID(), userId: owner, title: "P" });
+    const n = await notes.create({
+      id: crypto.randomUUID(),
+      userId: owner,
+      paperId: p.id,
+      kind: "note",
+      body: "secret",
+    });
+
+    await notes.update(attacker, n.id, { body: "hacked" });
+
+    const after = (await notes.listByPaper(owner, p.id)).find((x) => x.id === n.id);
+    expect(after?.body).toBe("secret"); // unchanged
+    expect(after?.updatedAt).toBeNull();
+  });
 });

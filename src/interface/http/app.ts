@@ -342,6 +342,18 @@ const routes = app
       return c.json({ note }, 201);
     },
   )
+  // Edit a note's body (user-scoped; stamps updatedAt).
+  .patch(
+    "/api/notes/:id",
+    requireAuth,
+    zValidator("json", z.object({ body: z.string().max(8000) })),
+    async (c) => {
+      await buildNoteRepo(c.env).update(c.get("ctx").userId, c.req.param("id"), {
+        body: c.req.valid("json").body,
+      });
+      return c.json({ ok: true });
+    },
+  )
   .delete("/api/notes/:id", requireAuth, async (c) => {
     await buildNoteRepo(c.env).delete(c.get("ctx").userId, c.req.param("id"));
     return c.json({ ok: true });

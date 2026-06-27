@@ -153,6 +153,8 @@ export const note = sqliteTable(
     rangeJson: text("range_json"),
     body: text("body"),
     createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(now),
+    // Set when a note is edited; null for never-edited notes.
+    updatedAt: integer("updated_at", { mode: "timestamp" }),
   },
   (t) => [index("note_user_paper_idx").on(t.userId, t.paperId)],
 );
