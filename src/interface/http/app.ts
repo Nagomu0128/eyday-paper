@@ -11,6 +11,7 @@ import {
   buildIngestPaper,
   buildLibrary,
   buildNoteRepo,
+  buildProcessPaper,
   buildProfileRepo,
   buildQaHistory,
   buildSuggestionRepo,
@@ -275,6 +276,17 @@ const routes = app
       return c.json({ ok: true });
     },
   )
+  // Rebuild a paper's search index: re-run the processing pipeline
+  // (extract → chunk → embed → index). Recovers papers left un-indexed by a
+  // transient failure during ingestion, so Q&A has chunks to retrieve.
+  .post("/api/papers/:id/reprocess", requireAuth, async (c) => {
+    const userId = c.get("ctx").userId;
+    const id = c.req.param("id");
+    const paper = await buildLibrary(c.env).papers.findById(userId, id);
+    if (!paper) throw new AppError("not_found", "paper not found");
+    await buildProcessPaper(c.env).execute({ userId, paperId: id });
+    return c.json({ ok: true });
+  })
   // Notes / highlights.
   .get("/api/papers/:id/notes", requireAuth, async (c) => {
     const notes = await buildNoteRepo(c.env).listByPaper(c.get("ctx").userId, c.req.param("id"));

@@ -11,6 +11,7 @@ import {
   IconDoc,
   IconNote,
   IconQuote,
+  IconRefresh,
   IconSpinner,
   IconWand,
 } from "../lib/icons";
@@ -63,6 +64,8 @@ export function Reader({ paperId, onBack }: { paperId: string; onBack: () => voi
   const [paneTab, setPaneTab] = useState<"chat" | "notes">("chat");
   const [context, setContext] = useState<SelectionContext | null>(null);
   const [popover, setPopover] = useState<Popover | null>(null);
+  const [reindexing, setReindexing] = useState(false);
+  const [reindexMsg, setReindexMsg] = useState<string | null>(null);
 
   const pane = useResizable({
     storageKey: "eyday.reader.pane.w",
@@ -117,6 +120,21 @@ export function Reader({ paperId, onBack }: { paperId: string; onBack: () => voi
     setDetail((d) => (d ? { ...d, paper: { ...d.paper, status } } : d));
   };
 
+  const reindex = async () => {
+    setReindexing(true);
+    setReindexMsg(null);
+    try {
+      await api.reprocess(paperId);
+      setReindexMsg("検索インデックスを再構築しました。右の AI チャットで質問できます。");
+      const refreshed = await api.getText(paperId).catch(() => null);
+      setDoc(refreshed ? keyDoc(refreshed) : null);
+    } catch {
+      setReindexMsg("再処理に失敗しました。少し待ってから再度お試しください。");
+    } finally {
+      setReindexing(false);
+    }
+  };
+
   const openPane = (tab: "chat" | "notes") => {
     setPaneTab(tab);
     setPaneOpen(true);
@@ -145,6 +163,15 @@ export function Reader({ paperId, onBack }: { paperId: string; onBack: () => voi
               { value: "en", label: "EN" },
             ]}
           />
+          <IconButton
+            label="検索インデックスを再構築（再処理）"
+            size="sm"
+            variant="secondary"
+            onClick={reindex}
+            disabled={reindexing}
+          >
+            {reindexing ? <IconSpinner /> : <IconRefresh />}
+          </IconButton>
           {paper?.pdfR2Key && (
             <button
               type="button"
@@ -173,6 +200,12 @@ export function Reader({ paperId, onBack }: { paperId: string; onBack: () => voi
             <span className="hidden sm:inline">AI に質問</span>
           </button>
         </header>
+
+        {reindexMsg && (
+          <div className="shrink-0 border-b border-line bg-primary-softer px-5 py-2 text-[0.82rem] text-primary-ink">
+            {reindexMsg}
+          </div>
+        )}
 
         {/* Scrollable reading content */}
         <div className="min-h-0 flex-1 overflow-y-auto">
