@@ -177,6 +177,11 @@ export const api = {
     return asJson(await fetch(`/api/papers/${id}/reprocess`, { method: "POST" }));
   },
 
+  /** User-triggered AI re-classification of a paper's home folder. */
+  async reclassify(id: string): Promise<{ folderId: string; folderName: string }> {
+    return asJson(await fetch(`/api/papers/${id}/reclassify`, { method: "POST" }));
+  },
+
   async getNotes(id: string): Promise<Note[]> {
     return (await asJson<{ notes: Note[] }>(await fetch(`/api/papers/${id}/notes`))).notes;
   },

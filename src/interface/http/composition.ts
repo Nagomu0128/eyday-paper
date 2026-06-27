@@ -1,5 +1,6 @@
 import { IngestPaper } from "../../application/ingestion/ingest-paper";
 import { ProcessPaper } from "../../application/ingestion/process-paper";
+import { ReclassifyPaper } from "../../application/ingestion/reclassify-paper";
 import { AnswerQuestion } from "../../application/qa/answer-question";
 import { ExplainSelection } from "../../application/reading/explain-selection";
 import { GenerateSuggestions } from "../../application/suggestion/generate-suggestions";
@@ -91,6 +92,21 @@ export const buildProcessPaper = (env: Env): ProcessPaper => {
     folderAssigner: new LlmFolderAssigner(gemini, FLASH_LITE),
     embedder: new WorkersAiEmbedder(env.AI),
     vectorIndex: new VectorizeIndexAdapter(env.VECTORIZE),
+  });
+};
+
+/**
+ * User-triggered "re-classify with AI": re-run LLM home-folder assignment for a
+ * single paper. Same Gemini Flash-Lite assigner as ingestion, but committed even
+ * for already-foldered papers (the click is explicit).
+ */
+export const buildReclassifyPaper = (env: Env): ReclassifyPaper => {
+  const db = createDb(env.DB);
+  return new ReclassifyPaper({
+    papers: new DrizzlePaperRepository(db),
+    folders: new DrizzleFolderRepository(db),
+    tags: new DrizzleTagRepository(db),
+    folderAssigner: new LlmFolderAssigner(geminiGateway(env), FLASH_LITE),
   });
 };
 

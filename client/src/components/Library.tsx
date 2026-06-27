@@ -11,6 +11,7 @@ import {
   IconLink,
   IconPlus,
   IconSearch,
+  IconSparkles,
   IconSpinner,
   IconUpload,
 } from "../lib/icons";
@@ -69,6 +70,8 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [reclassifying, setReclassifying] = useState(false);
+  const [reclassMsg, setReclassMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = () => {
@@ -169,6 +172,29 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
 
     return { roots: rootNodes, uncategorized: uncat };
   }, [all, folders, q, status]);
+
+  // Re-run AI home-folder assignment for every paper left in 未分類, one by one
+  // (each call always commits a home server-side, so the section drains).
+  const reclassifyUncategorized = async () => {
+    if (uncategorized.length === 0 || reclassifying) return;
+    setReclassifying(true);
+    setReclassMsg(null);
+    setError(null);
+    try {
+      let done = 0;
+      for (const p of uncategorized) {
+        await api.reclassify(p.id);
+        done++;
+        setReclassMsg(`再分類中… ${done}/${uncategorized.length}`);
+      }
+      setReclassMsg(null);
+      load();
+    } catch {
+      setError("AI 再分類に失敗しました。時間をおいて再試行してください。");
+    } finally {
+      setReclassifying(false);
+    }
+  };
 
   const toggle = (id: string) =>
     setCollapsed((prev) => {
@@ -368,9 +394,20 @@ export function Library({ onOpen }: { onOpen: (id: string) => void }) {
                   {roots.some((r) => subtreeCount(r) > 0) && (
                     <div className="mx-3 my-2 border-t border-line" />
                   )}
-                  <p className="px-3 py-1.5 text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint">
-                    未分類
-                  </p>
+                  <div className="flex items-center justify-between px-3 py-1.5">
+                    <p className="text-[0.72rem] font-semibold uppercase tracking-wide text-ink-faint">
+                      未分類 ({uncategorized.length})
+                    </p>
+                    <button
+                      type="button"
+                      onClick={reclassifyUncategorized}
+                      disabled={reclassifying}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-2.5 py-1 text-[0.75rem] font-medium text-primary transition-colors hover:bg-primary-softer disabled:opacity-50"
+                    >
+                      {reclassifying ? <IconSpinner /> : <IconSparkles />}
+                      {reclassifying ? (reclassMsg ?? "再分類中…") : "AI で再分類"}
+                    </button>
+                  </div>
                   {sortPapers(uncategorized, sort).map((p) => (
                     <PaperRow key={p.id} paper={p} depth={0} onOpen={onOpen} />
                   ))}

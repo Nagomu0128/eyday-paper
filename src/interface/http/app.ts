@@ -15,6 +15,7 @@ import {
   buildProcessPaper,
   buildProfileRepo,
   buildQaHistory,
+  buildReclassifyPaper,
   buildSuggestionRepo,
   buildSummarizePaper,
 } from "./composition";
@@ -301,6 +302,16 @@ const routes = app
     const chunks = await lib.chunks.countByPaper(userId, id);
     const textStored = (await lib.storage.getText(r2Keys.text(userId, id))) !== null;
     return c.json({ ok, error, chunks, textStored });
+  })
+  // User-triggered "re-classify with AI": re-run LLM home-folder assignment for a
+  // single paper (with fallback so an explicit click always commits a home). Lets
+  // the user rescue papers left in 未分類 or re-home a mis-foldered one.
+  .post("/api/papers/:id/reclassify", requireAuth, async (c) => {
+    const result = await buildReclassifyPaper(c.env).execute(
+      c.get("ctx").userId,
+      c.req.param("id"),
+    );
+    return c.json(result);
   })
   // Notes / highlights.
   .get("/api/papers/:id/notes", requireAuth, async (c) => {
