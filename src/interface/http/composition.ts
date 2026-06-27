@@ -34,7 +34,10 @@ import {
   DrizzleTagRepository,
 } from "../../infrastructure/repositories/library";
 import { DrizzleProfileRepository } from "../../infrastructure/repositories/profile";
-import { DrizzleQaMessageRepository } from "../../infrastructure/repositories/qa";
+import {
+  DrizzleQaMessageRepository,
+  DrizzleQaSessionRepository,
+} from "../../infrastructure/repositories/qa";
 import { DrizzleSuggestionRepository } from "../../infrastructure/repositories/suggestion";
 import { VectorizeIndexAdapter } from "../../infrastructure/search/vectorize-index";
 import { R2ObjectStorage } from "../../infrastructure/storage/r2-object-storage";
@@ -150,11 +153,15 @@ export const buildAnswerQuestion = (env: Env): AnswerQuestion => {
     reranker: new WorkersAiReranker(env.AI),
     generator: new LlmAnswerGenerator(openaiGateway(env), GPT_MID),
     history: new DrizzleQaMessageRepository(db),
+    sessions: new DrizzleQaSessionRepository(db),
   });
 };
 
 export const buildQaHistory = (env: Env): DrizzleQaMessageRepository =>
   new DrizzleQaMessageRepository(createDb(env.DB));
+
+export const buildQaSessionRepo = (env: Env): DrizzleQaSessionRepository =>
+  new DrizzleQaSessionRepository(createDb(env.DB));
 
 export const buildSummarizePaper = (env: Env): SummarizePaper =>
   new SummarizePaper({

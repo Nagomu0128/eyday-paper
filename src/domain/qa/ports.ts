@@ -1,9 +1,29 @@
 import type { OutputLang } from "../identity/profile";
 
+export interface QaSession {
+  id: string;
+  userId: string;
+  paperId: string;
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface QaSessionRepository {
+  create(input: { id: string; userId: string; paperId: string; title: string }): Promise<QaSession>;
+  listByPaper(userId: string, paperId: string): Promise<QaSession[]>;
+  findById(userId: string, id: string): Promise<QaSession | null>;
+  rename(userId: string, id: string, title: string): Promise<void>;
+  /** Bump updatedAt so the session sorts to the top after a new message. */
+  touch(userId: string, id: string): Promise<void>;
+  delete(userId: string, id: string): Promise<void>;
+}
+
 export interface QaMessage {
   id: string;
   userId: string;
   paperId: string;
+  sessionId: string | null;
   role: "user" | "assistant";
   content: string;
   createdAt: Date;
@@ -14,10 +34,12 @@ export interface QaMessageRepository {
     id: string;
     userId: string;
     paperId: string;
+    sessionId?: string | null;
     role: "user" | "assistant";
     content: string;
   }): Promise<void>;
   listByPaper(userId: string, paperId: string, limit?: number): Promise<QaMessage[]>;
+  listBySession(userId: string, sessionId: string, limit?: number): Promise<QaMessage[]>;
 }
 
 export interface RerankDoc {
@@ -52,5 +74,7 @@ export interface AnswerGenerator {
     question: string;
     contexts: AnswerContext[];
     lang: OutputLang;
+    /** Prior turns of the same session, oldest-first, for follow-up continuity. */
+    history?: { role: "user" | "assistant"; content: string }[];
   }): Promise<GroundedAnswer>;
 }

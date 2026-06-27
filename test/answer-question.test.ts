@@ -16,7 +16,10 @@ import {
   DrizzleChunkRepository,
   DrizzlePaperRepository,
 } from "../src/infrastructure/repositories/library";
-import { DrizzleQaMessageRepository } from "../src/infrastructure/repositories/qa";
+import {
+  DrizzleQaMessageRepository,
+  DrizzleQaSessionRepository,
+} from "../src/infrastructure/repositories/qa";
 import { seedUser } from "./helpers";
 
 class StubEmbedder implements Embedder {
@@ -92,6 +95,7 @@ describe("AnswerQuestion (RAG)", () => {
       reranker: new ReverseReranker(),
       generator: gen,
       history,
+      sessions: new DrizzleQaSessionRepository(db),
     });
 
     const res = await uc.execute({
@@ -129,6 +133,7 @@ describe("AnswerQuestion (RAG)", () => {
       reranker: new ReverseReranker(),
       generator: new CapturingGenerator(),
       history: new DrizzleQaMessageRepository(db),
+      sessions: new DrizzleQaSessionRepository(db),
     }).execute({ userId: u1, paperId: p1.id, question: "q", lang: "en" });
 
     expect(res.grounded).toBe(false);

@@ -191,6 +191,26 @@ export const suggestion = sqliteTable(
   ],
 );
 
+// A Q&A conversation thread for a paper (Cursor-style: many per paper). Messages
+// hang off a session so history survives closing the chat and the user can keep
+// several threads.
+export const qaSession = sqliteTable(
+  "qa_session",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    paperId: text("paper_id")
+      .notNull()
+      .references(() => paper.id, { onDelete: "cascade" }),
+    title: text("title").notNull().default("新しいチャット"),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(now),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(now),
+  },
+  (t) => [index("qa_session_user_paper_idx").on(t.userId, t.paperId)],
+);
+
 export const qaMessage = sqliteTable(
   "qa_message",
   {
@@ -201,11 +221,16 @@ export const qaMessage = sqliteTable(
     paperId: text("paper_id")
       .notNull()
       .references(() => paper.id, { onDelete: "cascade" }),
+    // Nullable for messages created before sessions existed; new messages always set it.
+    sessionId: text("session_id").references(() => qaSession.id, { onDelete: "cascade" }),
     role: text("role", { enum: ["user", "assistant"] }).notNull(),
     content: text("content").notNull(),
     createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(now),
   },
-  (t) => [index("qa_user_paper_idx").on(t.userId, t.paperId)],
+  (t) => [
+    index("qa_user_paper_idx").on(t.userId, t.paperId),
+    index("qa_user_session_idx").on(t.userId, t.sessionId),
+  ],
 );
 
 /**

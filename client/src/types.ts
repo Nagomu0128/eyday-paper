@@ -56,6 +56,23 @@ export interface Answer {
   answer: string;
   grounded: boolean;
   citations: { section: string | null; page: number | null }[];
+  sessionId: string | null;
+}
+
+export interface QaSession {
+  id: string;
+  paperId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface QaMessage {
+  id: string;
+  sessionId: string | null;
+  role: "user" | "assistant";
+  content: string;
+  createdAt: string;
 }
 
 export interface Summary {

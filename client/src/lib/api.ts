@@ -9,6 +9,8 @@ import type {
   Paper,
   PaperStatus,
   Profile,
+  QaMessage,
+  QaSession,
   Suggestion,
   Summary,
   Tag,
@@ -114,14 +116,35 @@ export const api = {
     );
   },
 
-  async askQuestion(id: string, question: string, lang: OutputLang): Promise<Answer> {
+  async askQuestion(
+    id: string,
+    question: string,
+    lang: OutputLang,
+    sessionId?: string,
+  ): Promise<Answer> {
     return asJson(
       await fetch(`/api/papers/${id}/qa`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ question, lang }),
+        body: JSON.stringify({ question, lang, sessionId }),
       }),
     );
+  },
+
+  /** Conversation threads (Q&A sessions) for a paper, most-recent first. */
+  async listQaSessions(id: string): Promise<QaSession[]> {
+    return (await asJson<{ sessions: QaSession[] }>(await fetch(`/api/papers/${id}/qa/sessions`)))
+      .sessions;
+  },
+
+  async getSessionMessages(sessionId: string): Promise<QaMessage[]> {
+    return (
+      await asJson<{ messages: QaMessage[] }>(await fetch(`/api/qa/sessions/${sessionId}/messages`))
+    ).messages;
+  },
+
+  async deleteQaSession(sessionId: string): Promise<void> {
+    await fetch(`/api/qa/sessions/${sessionId}`, { method: "DELETE" });
   },
 
   async getSummary(id: string, lang: OutputLang): Promise<Summary> {
