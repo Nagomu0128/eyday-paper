@@ -170,10 +170,11 @@ export const api = {
     });
   },
 
-  /** Re-run extract → chunk → embed → index for a paper (rebuilds its search index). */
-  async reprocess(id: string): Promise<void> {
-    const res = await fetch(`/api/papers/${id}/reprocess`, { method: "POST" });
-    if (!res.ok) throw new ApiError(res.status);
+  /** Re-run extract → chunk → embed → index; returns what landed (for diagnostics). */
+  async reprocess(
+    id: string,
+  ): Promise<{ ok: boolean; error: string | null; chunks: number; textStored: boolean }> {
+    return asJson(await fetch(`/api/papers/${id}/reprocess`, { method: "POST" }));
   },
 
   async getNotes(id: string): Promise<Note[]> {

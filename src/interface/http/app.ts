@@ -2,16 +2,17 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
+import { r2Keys } from "../../domain/storage/keys";
 import { detectIngestInput } from "../../infrastructure/ingestion/input";
 import { AppError, httpStatusForKind } from "../../shared/errors";
 import {
   buildAnswerQuestion,
   buildExplainSelection,
   buildGenerateSuggestions,
-  buildIngestionQueue,
   buildIngestPaper,
   buildLibrary,
   buildNoteRepo,
+  buildProcessPaper,
   buildProfileRepo,
   buildQaHistory,
   buildSuggestionRepo,
@@ -284,12 +285,22 @@ const routes = app
   .post("/api/papers/:id/reprocess", requireAuth, async (c) => {
     const userId = c.get("ctx").userId;
     const id = c.req.param("id");
-    const paper = await buildLibrary(c.env).papers.findById(userId, id);
+    const lib = buildLibrary(c.env);
+    const paper = await lib.papers.findById(userId, id);
     if (!paper) throw new AppError("not_found", "paper not found");
-    // Heavy work (extract → chunk → embed → index) runs in the queue consumer,
-    // which has generous limits + retries; the client polls `indexed`.
-    await buildIngestionQueue(c.env).enqueueProcess({ userId, paperId: id });
-    return c.json({ ok: true });
+    // Run synchronously and report exactly what landed, so a failure is visible
+    // (vs. a silent queue drop). Errors are returned, not thrown.
+    let ok = true;
+    let error: string | null = null;
+    try {
+      await buildProcessPaper(c.env).execute({ userId, paperId: id });
+    } catch (err) {
+      ok = false;
+      error = err instanceof Error ? err.message : String(err);
+    }
+    const chunks = await lib.chunks.countByPaper(userId, id);
+    const textStored = (await lib.storage.getText(r2Keys.text(userId, id))) !== null;
+    return c.json({ ok, error, chunks, textStored });
   })
   // Notes / highlights.
   .get("/api/papers/:id/notes", requireAuth, async (c) => {
