@@ -1,7 +1,16 @@
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
-import { IconChat, IconQuote, IconSend, IconSpinner, IconWand } from "../lib/icons";
-import type { OutputLang } from "../types";
+import {
+  IconChevronDown,
+  IconClock,
+  IconPlus,
+  IconQuote,
+  IconSend,
+  IconSpinner,
+  IconTrash,
+  IconWand,
+} from "../lib/icons";
+import type { OutputLang, QaMessage, QaSession } from "../types";
 import { Markdown } from "./Markdown";
 
 export interface SelectionContext {
@@ -27,10 +36,14 @@ interface ChatMsg {
 const sourceLabel = (s: SourceSpan): string =>
   [s.section, s.page != null ? `p.${s.page}` : null].filter(Boolean).join(" · ");
 
+const toChatMsg = (m: QaMessage): ChatMsg => ({ id: m.id, role: m.role, content: m.content });
+
 /**
  * Cursor-style chat about the paper. A text selection (or paragraph tap) becomes
  * a quoted context chip; sending with only a quote runs explain-on-selection,
- * while a typed question runs grounded RAG Q&A. Answers cite source spans.
+ * while a typed question runs grounded RAG Q&A. Q&A turns persist to a session
+ * (thread), so closing the pane keeps the conversation — and the user can keep
+ * several threads and browse history. (Explain-on-selection stays ephemeral.)
  */
 export function ChatPane({
   paperId,
@@ -46,16 +59,82 @@ export function ChatPane({
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [sessions, setSessions] = useState<QaSession[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [histOpen, setHistOpen] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
-  }, []);
-
-  const scrollDown = () => {
+  const scrollDown = useCallback(() => {
     requestAnimationFrame(() => {
       listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
     });
+  }, []);
+
+  // Load threads + the most recent thread's messages when the paper changes, so
+  // reopening the pane restores the conversation.
+  useEffect(() => {
+    let cancelled = false;
+    setMessages([]);
+    setSessionId(null);
+    setHistOpen(false);
+    api
+      .listQaSessions(paperId)
+      .then(async (ss) => {
+        if (cancelled) return;
+        setSessions(ss);
+        const latest = ss[0];
+        if (latest) {
+          setSessionId(latest.id);
+          const msgs = await api.getSessionMessages(latest.id).catch(() => []);
+          if (!cancelled) {
+            setMessages(msgs.map(toChatMsg));
+            scrollDown();
+          }
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [paperId, scrollDown]);
+
+  const refreshSessions = () => {
+    api
+      .listQaSessions(paperId)
+      .then(setSessions)
+      .catch(() => {});
+  };
+
+  const switchSession = async (id: string) => {
+    setHistOpen(false);
+    if (id === sessionId) return;
+    setSessionId(id);
+    const msgs = await api.getSessionMessages(id).catch(() => []);
+    setMessages(msgs.map(toChatMsg));
+    scrollDown();
+  };
+
+  const newChat = () => {
+    setHistOpen(false);
+    setSessionId(null);
+    setMessages([]);
+    onClearContext();
+  };
+
+  const deleteSession = async (id: string) => {
+    await api.deleteQaSession(id).catch(() => {});
+    const ss = await api.listQaSessions(paperId).catch(() => []);
+    setSessions(ss);
+    if (id === sessionId) {
+      const next = ss[0];
+      if (next) {
+        setSessionId(next.id);
+        setMessages((await api.getSessionMessages(next.id).catch(() => [])).map(toChatMsg));
+      } else {
+        setSessionId(null);
+        setMessages([]);
+      }
+    }
   };
 
   const send = async () => {
@@ -82,6 +161,7 @@ export function ChatPane({
 
     try {
       if (quote && !trimmed) {
+        // Explain-on-selection: a one-off, not part of a saved thread.
         const r = await api.explain(paperId, {
           selectedText: quote,
           section: context?.section ?? undefined,
@@ -90,11 +170,19 @@ export function ChatPane({
         settle({ content: r.explanation, sources: [r.source] });
       } else {
         const question = quote ? `選択箇所:「${quote}」\n\n${trimmed}` : trimmed;
-        const r = await api.askQuestion(paperId, question, lang);
+        const r = await api.askQuestion(paperId, question, lang, sessionId ?? undefined);
         settle({ content: r.answer, sources: r.citations, grounded: r.grounded });
+        if (!sessionId && r.sessionId) setSessionId(r.sessionId);
+        refreshSessions(); // pick up the new/renamed thread + re-sort by recency
       }
-    } catch {
-      settle({ content: "生成に失敗しました。少し待って再度お試しください。", grounded: false });
+    } catch (err) {
+      const limited = err instanceof Error && err.message.includes("429");
+      settle({
+        content: limited
+          ? "本日の質問回数の上限に達しました。明日また利用できます。"
+          : "生成に失敗しました。少し待って再度お試しください。",
+        grounded: false,
+      });
     } finally {
       setBusy(false);
       scrollDown();
@@ -108,13 +196,80 @@ export function ChatPane({
     }
   };
 
+  const currentTitle = sessions.find((s) => s.id === sessionId)?.title ?? "新しいチャット";
+
   return (
     <div className="flex h-full min-h-0 flex-col">
+      {/* Thread bar: history switcher + new chat */}
+      <div className="relative flex shrink-0 items-center gap-2 border-b border-line px-2 py-1.5">
+        <button
+          type="button"
+          onClick={() => setHistOpen((v) => !v)}
+          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[0.78rem] font-medium text-ink-muted transition-colors hover:bg-surface-muted hover:text-ink"
+        >
+          <IconClock className="text-[0.95rem]" />
+          履歴{sessions.length > 0 ? ` (${sessions.length})` : ""}
+          <IconChevronDown className="text-[0.85rem]" />
+        </button>
+        <span className="flex-1 truncate text-center text-[0.78rem] text-ink-faint">
+          {currentTitle}
+        </span>
+        <button
+          type="button"
+          onClick={newChat}
+          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[0.78rem] font-medium text-primary transition-colors hover:bg-primary-softer"
+        >
+          <IconPlus className="text-[0.95rem]" />
+          新規
+        </button>
+
+        {histOpen && (
+          <>
+            <button
+              type="button"
+              aria-label="履歴メニューを閉じる"
+              className="fixed inset-0 z-10 cursor-default"
+              onClick={() => setHistOpen(false)}
+            />
+            <div className="absolute left-2 top-full z-20 mt-1 max-h-72 w-64 overflow-y-auto rounded-xl border border-line bg-surface py-1 shadow-pop">
+              {sessions.length === 0 ? (
+                <p className="px-3 py-2 text-[0.78rem] text-ink-faint">
+                  まだ会話履歴はありません。
+                </p>
+              ) : (
+                sessions.map((s) => (
+                  <div
+                    key={s.id}
+                    className="group flex items-center gap-1 px-1.5 hover:bg-surface-muted"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => switchSession(s.id)}
+                      className={cxActive(s.id === sessionId)}
+                    >
+                      {s.title}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteSession(s.id)}
+                      aria-label="この会話を削除"
+                      className="shrink-0 rounded-md p-1 text-ink-faint opacity-0 transition-opacity hover:bg-danger-soft hover:text-danger group-hover:opacity-100"
+                    >
+                      <IconTrash className="text-[0.9rem]" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
       <div ref={listRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center px-4 py-10 text-center">
             <span className="mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-primary-soft text-[1.5rem] text-primary">
-              <IconChat />
+              <IconWand />
             </span>
             <p className="text-sm font-medium text-ink">この論文に質問</p>
             <p className="mt-1 max-w-[16rem] text-[0.8rem] text-ink-muted">
@@ -218,3 +373,8 @@ export function ChatPane({
     </div>
   );
 }
+
+const cxActive = (active: boolean): string =>
+  `flex-1 truncate rounded-md px-2 py-1.5 text-left text-[0.8rem] ${
+    active ? "font-medium text-primary" : "text-ink-muted"
+  }`;

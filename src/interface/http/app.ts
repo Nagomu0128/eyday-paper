@@ -15,6 +15,7 @@ import {
   buildProcessPaper,
   buildProfileRepo,
   buildQaHistory,
+  buildQaSessionRepo,
   buildReclassifyPaper,
   buildSuggestionRepo,
   buildSummarizePaper,
@@ -153,7 +154,11 @@ const routes = app
     requireAuth,
     zValidator(
       "json",
-      z.object({ question: z.string().min(1).max(2000), lang: z.enum(["ja", "en"]).optional() }),
+      z.object({
+        question: z.string().min(1).max(2000),
+        lang: z.enum(["ja", "en"]).optional(),
+        sessionId: z.string().optional(),
+      }),
     ),
     async (c) => {
       const b = c.req.valid("json");
@@ -162,17 +167,39 @@ const routes = app
         paperId: c.req.param("id"),
         question: b.question,
         lang: b.lang ?? "ja",
+        sessionId: b.sessionId,
       });
       return c.json(result);
     },
   )
-  // Q&A history for a paper.
+  // Q&A history for a paper (all sessions, oldest-first).
   .get("/api/papers/:id/qa", requireAuth, async (c) => {
     const messages = await buildQaHistory(c.env).listByPaper(
       c.get("ctx").userId,
       c.req.param("id"),
     );
     return c.json({ messages });
+  })
+  // Conversation threads for a paper (Cursor-style multi-session).
+  .get("/api/papers/:id/qa/sessions", requireAuth, async (c) => {
+    const sessions = await buildQaSessionRepo(c.env).listByPaper(
+      c.get("ctx").userId,
+      c.req.param("id"),
+    );
+    return c.json({ sessions });
+  })
+  // Messages of one session (user-scoped; cross-tenant yields empty).
+  .get("/api/qa/sessions/:sid/messages", requireAuth, async (c) => {
+    const messages = await buildQaHistory(c.env).listBySession(
+      c.get("ctx").userId,
+      c.req.param("sid"),
+    );
+    return c.json({ messages });
+  })
+  // Delete a session (cascades to its messages).
+  .delete("/api/qa/sessions/:sid", requireAuth, async (c) => {
+    await buildQaSessionRepo(c.env).delete(c.get("ctx").userId, c.req.param("sid"));
+    return c.json({ ok: true });
   })
   // TL;DR + section summaries (cached per lang). ?lang=ja|en.
   .get("/api/papers/:id/summary", requireAuth, async (c) => {
