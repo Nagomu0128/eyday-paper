@@ -168,6 +168,12 @@ export const api = {
     });
   },
 
+  /** Re-run extract → chunk → embed → index for a paper (rebuilds its search index). */
+  async reprocess(id: string): Promise<void> {
+    const res = await fetch(`/api/papers/${id}/reprocess`, { method: "POST" });
+    if (!res.ok) throw new ApiError(res.status);
+  },
+
   async getNotes(id: string): Promise<Note[]> {
     return (await asJson<{ notes: Note[] }>(await fetch(`/api/papers/${id}/notes`))).notes;
   },

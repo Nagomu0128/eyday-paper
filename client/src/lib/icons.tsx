@@ -146,6 +146,17 @@ export function IconUpload(props: IconProps) {
   );
 }
 
+export function IconRefresh(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M3.5 12a8.5 8.5 0 0 1 14.4-6.1L21 8" />
+      <path d="M21 3.5V8h-4.5" />
+      <path d="M20.5 12a8.5 8.5 0 0 1-14.4 6.1L3 16" />
+      <path d="M3 20.5V16h4.5" />
+    </Svg>
+  );
+}
+
 export function IconBookOpen(props: IconProps) {
   return (
     <Svg {...props}>
