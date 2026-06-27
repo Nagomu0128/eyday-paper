@@ -103,6 +103,26 @@ describe("repositories force user_id scoping", () => {
     expect(await chunks.listByPaper(u1, p.id)).toHaveLength(0);
   });
 
+  it("chunk: bulkCreate batches past D1's 100 bound-parameter limit", async () => {
+    const db = createDb(env.DB);
+    const papers = new DrizzlePaperRepository(db);
+    const chunks = new DrizzleChunkRepository(db);
+    const u = await seedUser();
+    const p = await papers.create({ id: crypto.randomUUID(), userId: u, title: "X" });
+    // 25 rows × 9 columns = 225 params — fails as one insert; bulkCreate must batch.
+    await chunks.bulkCreate(
+      Array.from({ length: 25 }, (_, i) => ({
+        id: crypto.randomUUID(),
+        userId: u,
+        paperId: p.id,
+        idx: i,
+        text: `chunk ${i}`,
+        charLen: 8,
+      })),
+    );
+    expect(await chunks.countByPaper(u, p.id)).toBe(25);
+  });
+
   it("profile: upsert merges fields and preserves prior values", async () => {
     const profiles = new DrizzleProfileRepository(createDb(env.DB));
     const u = await seedUser();
