@@ -32,6 +32,8 @@ export interface SuggestionSource {
     seedDois: string[];
     domains?: string[];
     organizations?: string[];
+    /** Ad-hoc free-text intent for this run; becomes the primary search axis. */
+    query?: string;
   }): Promise<ExternalPaper[]>;
 }
 

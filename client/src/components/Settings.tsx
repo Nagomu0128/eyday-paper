@@ -16,6 +16,7 @@ import { Button, Segmented } from "./ui";
 
 const LEVELS = ["", "初級", "中級", "上級"];
 const READABILITY = ["", "やさしめ", "標準", "詳しめ"];
+const HOURS = Array.from({ length: 24 }, (_, h) => h); // 0..23 (JST), for the cron-time select
 
 type Accent = "primary" | "accent" | "success" | "danger";
 const CHIP: Record<Accent, string> = {
@@ -34,6 +35,7 @@ export function Settings() {
   const [level, setLevel] = useState("");
   const [readability, setReadability] = useState("");
   const [outputLang, setOutputLang] = useState<OutputLang>("ja");
+  const [suggestHour, setSuggestHour] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -51,6 +53,7 @@ export function Settings() {
           setLevel(p.level ?? "");
           setReadability(p.readability ?? "");
           setOutputLang(p.outputLang);
+          setSuggestHour(p.suggestHour);
         }
       })
       .catch(() => {})
@@ -72,6 +75,7 @@ export function Settings() {
         level: level || null,
         readability: readability || null,
         outputLang,
+        suggestHour,
       });
       setSaved(true);
     } finally {
@@ -129,6 +133,24 @@ export function Settings() {
                     dirtyReset();
                   }}
                 />
+              </Row>
+              <Row label="提案の自動更新時刻 (JST)">
+                <select
+                  value={suggestHour === null ? "" : String(suggestHour)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setSuggestHour(v === "" ? null : Number(v));
+                    dirtyReset();
+                  }}
+                  className="h-9 rounded-lg border border-line bg-surface px-3 text-sm text-ink outline-none"
+                >
+                  <option value="">おまかせ（07:00）</option>
+                  {HOURS.map((h) => (
+                    <option key={h} value={h}>
+                      {`${String(h).padStart(2, "0")}:00`}
+                    </option>
+                  ))}
+                </select>
               </Row>
             </Card>
 

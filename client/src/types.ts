@@ -90,6 +90,7 @@ export interface Profile {
   level: string | null;
   readability: string | null;
   outputLang: OutputLang;
+  suggestHour: number | null;
 }
 
 export interface Note {

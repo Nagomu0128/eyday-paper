@@ -50,7 +50,7 @@ const fallbackRank = (candidates: ExternalPaper[]): RankedSuggestion[] => {
 export class GenerateSuggestions {
   constructor(private readonly deps: GenerateSuggestionsDeps) {}
 
-  async execute(userId: string): Promise<number> {
+  async execute(userId: string, opts?: { query?: string }): Promise<number> {
     const d = this.deps;
 
     const profile = await d.profiles.get(userId);
@@ -65,6 +65,7 @@ export class GenerateSuggestions {
       organizations: profile?.organizations ?? [],
       seedArxivIds: [...ownedArxiv],
       seedDois: [...ownedDoi],
+      query: opts?.query?.trim() || undefined,
     });
 
     // Exclude already-owned papers (by arxiv id / doi) and de-duplicate.

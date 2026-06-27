@@ -33,6 +33,8 @@ export const profile = sqliteTable("profile", {
   outputLang: text("output_lang", { enum: ["ja", "en"] })
     .notNull()
     .default("ja"),
+  // Hour-of-day (0–23, JST) for the daily suggestion cron; null = default (07:00).
+  suggestHour: integer("suggest_hour"),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(now),
 });
 

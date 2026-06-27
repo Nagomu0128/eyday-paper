@@ -1,5 +1,7 @@
+import { eq } from "drizzle-orm";
+import { dueForSuggestions } from "./application/suggestion/due";
 import { createDb } from "./db/client";
-import { user } from "./db/schema";
+import { profile, user } from "./db/schema";
 import type { ProcessJob } from "./domain/ingestion/ports";
 import { app } from "./interface/http/app";
 import { buildGenerateSuggestions, buildProcessPaper } from "./interface/http/composition";
@@ -26,10 +28,16 @@ export default {
     }
   },
 
-  async scheduled(_event: ScheduledController, env: Env): Promise<void> {
-    const users = await createDb(env.DB).select({ id: user.id }).from(user);
+  async scheduled(event: ScheduledController, env: Env): Promise<void> {
+    // Hourly cron: run the batch only for users whose configured JST hour is now.
+    const nowUtcHour = new Date(event.scheduledTime).getUTCHours();
+    const rows = await createDb(env.DB)
+      .select({ id: user.id, suggestHour: profile.suggestHour })
+      .from(user)
+      .leftJoin(profile, eq(profile.userId, user.id));
     const generate = buildGenerateSuggestions(env);
-    for (const u of users) {
+    for (const u of rows) {
+      if (!dueForSuggestions(u.suggestHour ?? null, nowUtcHour)) continue;
       try {
         await generate.execute(u.id);
       } catch (error) {
