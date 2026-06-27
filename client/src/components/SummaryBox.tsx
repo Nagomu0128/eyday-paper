@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api } from "../lib/api";
 import { IconChevronDown, IconChevronRight, IconSparkles, IconSpinner } from "../lib/icons";
 import type { OutputLang, Summary } from "../types";
+import { Markdown } from "./Markdown";
 
 /** TL;DR + section summaries, generated on demand and cached per language. */
 export function SummaryBox({ paperId, lang }: { paperId: string; lang: OutputLang }) {
@@ -50,7 +51,9 @@ export function SummaryBox({ paperId, lang }: { paperId: string; lang: OutputLan
 
       {summary && (
         <div className="border-t border-primary/12 bg-surface/60 px-4 py-3">
-          <p className="text-[0.95rem] leading-7 text-ink">{summary.tldr}</p>
+          <div className="text-[0.95rem] leading-7 text-ink">
+            <Markdown>{summary.tldr}</Markdown>
+          </div>
           {summary.sections.length > 0 && (
             <div className="mt-3">
               <button
@@ -69,7 +72,7 @@ export function SummaryBox({ paperId, lang }: { paperId: string; lang: OutputLan
                       className="text-[0.84rem] leading-6 text-ink-muted"
                     >
                       {s.heading && <span className="font-semibold text-ink">{s.heading}: </span>}
-                      {s.summary}
+                      <Markdown>{s.summary}</Markdown>
                     </li>
                   ))}
                 </ul>

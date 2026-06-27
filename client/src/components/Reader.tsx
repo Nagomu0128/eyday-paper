@@ -19,6 +19,7 @@ import { ResizeHandle, useResizable } from "../lib/resizable";
 import { useMediaQuery } from "../lib/useMediaQuery";
 import type { ExtractedDoc, Folder, OutputLang, Paper, PaperStatus, Tag } from "../types";
 import { ChatPane, type SelectionContext } from "./ChatPane";
+import { MathText } from "./MathText";
 import { NotesPanel } from "./NotesPanel";
 import { SummaryBox } from "./SummaryBox";
 import { IconButton, Segmented } from "./ui";
@@ -302,7 +303,7 @@ export function Reader({ paperId, onBack }: { paperId: string; onBack: () => voi
                           >
                             <IconQuote className="text-[1rem]" />
                           </button>
-                          <p>{p.text}</p>
+                          <MathText text={p.text} />
                         </div>
                       ))}
                     </section>
