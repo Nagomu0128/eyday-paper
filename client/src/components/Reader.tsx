@@ -123,25 +123,24 @@ export function Reader({ paperId, onBack }: { paperId: string; onBack: () => voi
 
   const reindex = async () => {
     setReindexing(true);
-    setReindexMsg("再処理を開始しました。索引化を待っています…");
+    setReindexMsg("再処理中…（10〜30秒かかります）");
     try {
-      await api.reprocess(paperId);
-      // The queue consumer processes asynchronously; poll until chunks exist.
-      const start = Date.now();
-      while (Date.now() - start < 90_000) {
-        await new Promise((r) => setTimeout(r, 4000));
+      const r = await api.reprocess(paperId);
+      if (r.ok && r.chunks > 0) {
+        setReindexMsg(
+          `索引化が完了しました（チャンク ${r.chunks} 件）。右の AI チャットで質問できます。`,
+        );
         const d = await api.getPaper(paperId).catch(() => null);
-        if (d?.indexed) {
-          setDetail(d);
-          setReindexMsg(null);
-          const refreshed = await api.getText(paperId).catch(() => null);
-          setDoc(refreshed ? keyDoc(refreshed) : null);
-          return;
-        }
+        if (d) setDetail(d);
+        const refreshed = await api.getText(paperId).catch(() => null);
+        setDoc(refreshed ? keyDoc(refreshed) : null);
+      } else {
+        setReindexMsg(
+          `再処理に失敗しました（chunks=${r.chunks}, textStored=${r.textStored}）: ${r.error ?? "不明なエラー"}`,
+        );
       }
-      setReindexMsg("索引化に時間がかかっています。少し待ってから画面を開き直してください。");
     } catch {
-      setReindexMsg("再処理に失敗しました。少し待ってから再度お試しください。");
+      setReindexMsg("再処理リクエスト自体に失敗しました。");
     } finally {
       setReindexing(false);
     }
