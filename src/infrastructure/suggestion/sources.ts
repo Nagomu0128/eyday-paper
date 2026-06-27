@@ -9,13 +9,20 @@ type CollectInput = {
   seedDois: string[];
   domains?: string[];
   organizations?: string[];
+  query?: string;
 };
 
-/** Merge the user's free-text tags (topics + fields + orgs) into search queries. */
+/**
+ * Build text search queries. When the user gave an ad-hoc `query`, it leads (the
+ * primary intent for this run); their profile tags fill the remaining slots. With
+ * no query it falls back to tags only (the daily-batch behavior).
+ */
 const searchQueries = (input: CollectInput, max: number): string[] => {
-  const all = [...input.interests, ...(input.domains ?? []), ...(input.organizations ?? [])]
+  const tags = [...input.interests, ...(input.domains ?? []), ...(input.organizations ?? [])]
     .map((s) => s.trim())
     .filter(Boolean);
+  const q = input.query?.trim();
+  const all = q ? [q, ...tags] : tags;
   return [...new Set(all)].slice(0, max);
 };
 

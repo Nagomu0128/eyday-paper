@@ -65,8 +65,9 @@
       }
     ]
   },
-  // Daily suggestion batch (07:00 JST = 22:00 UTC). Caches results to D1.
+  // Suggestion batch runs hourly; the scheduled handler runs it only for users
+  // whose configured hour (profile.suggest_hour, JST; default 07:00) matches.
   "triggers": {
-    "crons": ["0 22 * * *"]
+    "crons": ["0 * * * *"]
   }
 }

@@ -224,7 +224,10 @@ const routes = app
   // ranker is non-fatal (heuristic fallback), so it finishes within one request
   // and the client gets a definitive result (no polling).
   .post("/api/suggestions/refresh", requireAuth, async (c) => {
-    const count = await buildGenerateSuggestions(c.env).execute(c.get("ctx").userId);
+    // Optional free-text intent for this run; empty → library + interest tags.
+    const body = (await c.req.json().catch(() => ({}))) as { query?: unknown };
+    const query = typeof body.query === "string" ? body.query.slice(0, 300) : undefined;
+    const count = await buildGenerateSuggestions(c.env).execute(c.get("ctx").userId, { query });
     return c.json({ count });
   })
   // Import a suggestion: ingest server-side from the best identifier
@@ -264,6 +267,7 @@ const routes = app
         level: z.string().max(60).nullish(),
         readability: z.string().max(60).nullish(),
         outputLang: z.enum(["ja", "en"]).optional(),
+        suggestHour: z.number().int().min(0).max(23).nullable().optional(),
       }),
     ),
     async (c) => {

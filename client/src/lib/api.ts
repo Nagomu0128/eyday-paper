@@ -25,6 +25,7 @@ export interface ProfilePatch {
   level?: string | null;
   readability?: string | null;
   outputLang?: OutputLang;
+  suggestHour?: number | null;
 }
 
 export class ApiError extends Error {
@@ -155,9 +156,19 @@ export const api = {
     return asJson(await fetch("/api/suggestions"));
   },
 
-  /** Generate + cache suggestions synchronously; returns how many were produced. */
-  async refreshSuggestions(): Promise<{ count: number }> {
-    return asJson(await fetch("/api/suggestions/refresh", { method: "POST" }));
+  /**
+   * Generate + cache suggestions synchronously; returns how many were produced.
+   * An optional free-text query becomes the primary search intent for this run
+   * (empty → library + interest tags, the default behavior).
+   */
+  async refreshSuggestions(query?: string): Promise<{ count: number }> {
+    return asJson(
+      await fetch("/api/suggestions/refresh", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ query }),
+      }),
+    );
   },
 
   async dismissSuggestion(id: string): Promise<void> {

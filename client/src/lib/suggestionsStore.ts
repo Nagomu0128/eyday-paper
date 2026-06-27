@@ -40,11 +40,11 @@ export const suggestionsStore = {
    * so the loading state + favicon spinner persist while the user switches tabs;
    * on completion the Suggestions view reloads via `finishedAt`.
    */
-  async refresh(): Promise<void> {
+  async refresh(query?: string): Promise<void> {
     if (state.refreshing) return;
     setState({ refreshing: true, error: null });
     try {
-      const { count } = await api.refreshSuggestions();
+      const { count } = await api.refreshSuggestions(query);
       setState({ refreshing: false, lastCount: count, finishedAt: Date.now() });
     } catch {
       setState({ refreshing: false, error: "提案の更新に失敗しました" });

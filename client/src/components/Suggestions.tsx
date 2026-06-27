@@ -5,6 +5,7 @@ import {
   IconClose,
   IconExternal,
   IconPlus,
+  IconSearch,
   IconSparkles,
   IconSpinner,
   IconStar,
@@ -21,7 +22,13 @@ const SOURCE_LABEL: Record<Suggestion["source"], string> = {
 
 export function Suggestions() {
   const [data, setData] = useState<{ classic: Suggestion[]; recent: Suggestion[] } | null>(null);
+  const [query, setQuery] = useState("");
   const { refreshing, error, finishedAt } = useSuggestionsStatus();
+
+  const runRefresh = () => {
+    if (refreshing) return;
+    suggestionsStore.refresh(query.trim() || undefined);
+  };
 
   const load = () => {
     api
@@ -39,21 +46,39 @@ export function Suggestions() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-4xl px-5 py-7 sm:px-8">
-        <div className="mb-6 flex items-end justify-between gap-4">
-          <div>
+        <div className="mb-6">
+          <div className="mb-3">
             <h1 className="text-xl font-semibold tracking-tight text-ink">Suggestions</h1>
             <p className="mt-1 text-sm text-ink-muted">
-              あなたの蔵書と興味タグをもとに、実データから根拠づけて提案します。
+              実データから根拠づけて提案します。検索したいテーマを入力するとその意図で探します（空欄なら蔵書と興味タグから）。
             </p>
           </div>
-          <Button
-            variant={refreshing ? "secondary" : "primary"}
-            onClick={() => suggestionsStore.refresh()}
-            disabled={refreshing}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              runRefresh();
+            }}
+            className="flex flex-col gap-2 sm:flex-row"
           >
-            {refreshing ? <IconSpinner /> : <IconSparkles />}
-            {refreshing ? "更新中…" : "更新"}
-          </Button>
+            <div className="flex flex-1 items-center gap-2 rounded-xl border border-line bg-surface px-3">
+              <IconSearch className="text-[1.1rem] text-ink-faint" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="例: 拡散モデルの高速サンプリング（空欄で蔵書＋興味タグ）"
+                maxLength={300}
+                className="h-10 flex-1 bg-transparent text-sm outline-none placeholder:text-ink-faint"
+              />
+            </div>
+            <Button
+              type="submit"
+              variant={refreshing ? "secondary" : "primary"}
+              disabled={refreshing}
+            >
+              {refreshing ? <IconSpinner /> : <IconSparkles />}
+              {refreshing ? "更新中…" : "更新"}
+            </Button>
+          </form>
         </div>
 
         {refreshing && (
@@ -79,11 +104,7 @@ export function Suggestions() {
             title="まだ提案がありません"
             description="「更新」を押すか、論文を取り込むと、定番と最新の論文が提案されます。"
             action={
-              <Button
-                variant="primary"
-                onClick={() => suggestionsStore.refresh()}
-                disabled={refreshing}
-              >
+              <Button variant="primary" onClick={runRefresh} disabled={refreshing}>
                 <IconSparkles />
                 提案を生成
               </Button>

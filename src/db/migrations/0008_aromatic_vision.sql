@@ -1,0 +1,1 @@
+ALTER TABLE `profile` ADD `suggest_hour` integer;

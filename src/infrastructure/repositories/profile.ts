@@ -25,6 +25,7 @@ const toProfile = (r: Row): Profile => ({
   level: r.level,
   readability: r.readability,
   outputLang: r.outputLang,
+  suggestHour: r.suggestHour,
   updatedAt: r.updatedAt,
 });
 
@@ -47,6 +48,7 @@ export class DrizzleProfileRepository implements ProfileRepository {
     if (patch.level !== undefined) set.level = patch.level;
     if (patch.readability !== undefined) set.readability = patch.readability;
     if (patch.outputLang !== undefined) set.outputLang = patch.outputLang;
+    if (patch.suggestHour !== undefined) set.suggestHour = patch.suggestHour;
 
     await this.db
       .insert(profile)
