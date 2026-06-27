@@ -7,6 +7,7 @@ import type {
   QaSessionRepository,
   Reranker,
 } from "../../domain/qa/ports";
+import type { RateLimiter } from "../../domain/ratelimit/ports";
 import type { VectorIndex } from "../../domain/search/vector-index";
 import { AppError } from "../../shared/errors";
 import { newId } from "../../shared/id";
@@ -37,11 +38,14 @@ export interface AnswerQuestionDeps {
   generator: AnswerGenerator;
   history: QaMessageRepository;
   sessions: QaSessionRepository;
+  limiter: RateLimiter;
 }
 
 const RECALL_K = 40;
 const RERANK_K = 5;
 const HISTORY_TURNS = 6;
+/** Generous per-user daily cap on real Q&A (GPT-mid) — a runaway/abuse backstop. */
+const QA_DAILY_LIMIT = 30;
 
 /** First line of the question, trimmed to a short session title. */
 const titleFrom = (question: string): string => {
@@ -62,6 +66,11 @@ export class AnswerQuestion {
     const d = this.deps;
     const question = req.question.trim();
     if (question.length === 0) throw new AppError("validation", "question is required");
+
+    const limit = await d.limiter.checkAndIncrement(req.userId, "qa", QA_DAILY_LIMIT);
+    if (!limit.allowed) {
+      throw new AppError("rate_limited", "本日の質問回数の上限に達しました。");
+    }
 
     // Resolve the conversation thread up front so we can feed its prior turns to
     // the generator (follow-up continuity). Sessions only apply to a real paper.

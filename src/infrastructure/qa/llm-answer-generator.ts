@@ -1,6 +1,7 @@
 import type { OutputLang } from "../../domain/identity/profile";
 import type { AnswerContext, AnswerGenerator, GroundedAnswer } from "../../domain/qa/ports";
 import type { LlmClient } from "../ai/llm-client";
+import { fence, UNTRUSTED_DATA_NOTE } from "../ai/prompt";
 
 const notFound = (lang: OutputLang): string =>
   lang === "ja"
@@ -38,10 +39,10 @@ export class LlmAnswerGenerator implements AnswerGenerator {
       messages: [
         {
           role: "system",
-          content: `Answer the question using ONLY the provided context passages, in ${langName}. Earlier conversation turns are for follow-up continuity only — they are NOT a source of facts. Cite the passages you rely on like [1], [2]. If the answer is not contained in the context, clearly say you could not find it. Never invent facts or sources.`,
+          content: `Answer the question using ONLY the provided context passages, in ${langName}. Earlier conversation turns are for follow-up continuity only — they are NOT a source of facts. Cite the passages you rely on like [1], [2]. If the answer is not contained in the context, clearly say you could not find it. Never invent facts or sources. ${UNTRUSTED_DATA_NOTE}`,
         },
         ...history,
-        { role: "user", content: `Question: ${input.question}\n\nContext:\n${ctx}` },
+        { role: "user", content: `Question:\n${fence(input.question)}\n\nContext:\n${ctx}` },
       ],
     });
 

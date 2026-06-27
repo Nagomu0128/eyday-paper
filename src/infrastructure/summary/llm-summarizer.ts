@@ -5,6 +5,7 @@ import type {
   SummarySection,
 } from "../../domain/summary/ports";
 import type { LlmClient } from "../ai/llm-client";
+import { fence, UNTRUSTED_DATA_NOTE } from "../ai/prompt";
 
 const MAX_SECTIONS = 12;
 const langName = (lang: SummarizeInput["lang"]): string => (lang === "ja" ? "Japanese" : "English");
@@ -34,9 +35,9 @@ export class LlmSummarizer implements Summarizer {
             messages: [
               {
                 role: "system",
-                content: `Summarize this section of an academic paper in 1-2 sentences in ${lang}. Be faithful; do not invent.`,
+                content: `Summarize this section of an academic paper in 1-2 sentences in ${lang}. Be faithful; do not invent. ${UNTRUSTED_DATA_NOTE}`,
               },
-              { role: "user", content: `${s.heading ? `${s.heading}\n` : ""}${s.text}` },
+              { role: "user", content: fence(`${s.heading ? `${s.heading}\n` : ""}${s.text}`) },
             ],
           })
         ).trim(),
@@ -50,11 +51,11 @@ export class LlmSummarizer implements Summarizer {
         messages: [
           {
             role: "system",
-            content: `Write a 2-3 sentence TL;DR of the paper in ${lang}, based on the section summaries. Faithful, no new facts.`,
+            content: `Write a 2-3 sentence TL;DR of the paper in ${lang}, based on the section summaries. Faithful, no new facts. ${UNTRUSTED_DATA_NOTE}`,
           },
           {
             role: "user",
-            content: `Title: ${input.title}\n\n${sections.map((s) => `${s.heading ?? ""}: ${s.summary}`).join("\n")}`,
+            content: `Title: ${input.title}\n\n${fence(sections.map((s) => `${s.heading ?? ""}: ${s.summary}`).join("\n"))}`,
           },
         ],
       })

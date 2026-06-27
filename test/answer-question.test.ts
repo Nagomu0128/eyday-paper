@@ -20,7 +20,7 @@ import {
   DrizzleQaMessageRepository,
   DrizzleQaSessionRepository,
 } from "../src/infrastructure/repositories/qa";
-import { seedUser } from "./helpers";
+import { allowAllLimiter, seedUser } from "./helpers";
 
 class StubEmbedder implements Embedder {
   embed(texts: string[]): Promise<number[][]> {
@@ -96,6 +96,7 @@ describe("AnswerQuestion (RAG)", () => {
       generator: gen,
       history,
       sessions: new DrizzleQaSessionRepository(db),
+      limiter: allowAllLimiter,
     });
 
     const res = await uc.execute({
@@ -134,6 +135,7 @@ describe("AnswerQuestion (RAG)", () => {
       generator: new CapturingGenerator(),
       history: new DrizzleQaMessageRepository(db),
       sessions: new DrizzleQaSessionRepository(db),
+      limiter: allowAllLimiter,
     }).execute({ userId: u1, paperId: p1.id, question: "q", lang: "en" });
 
     expect(res.grounded).toBe(false);

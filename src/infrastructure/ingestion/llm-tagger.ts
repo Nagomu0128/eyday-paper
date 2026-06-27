@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Tagger, TagSuggestion } from "../../domain/ingestion/extraction";
 import { parseLlmJson } from "../ai/json";
 import type { LlmClient } from "../ai/llm-client";
+import { fence, UNTRUSTED_DATA_NOTE } from "../ai/prompt";
 
 const tagsSchema = z.object({
   tags: z
@@ -30,11 +31,12 @@ export class LlmTagger implements Tagger {
         {
           role: "system",
           content:
-            'Tag academic papers. Reply with strict JSON {"tags":[{"name":string,"kind":"field"|"topic"|"method"}]}. 3-6 concise lowercase tags. No prose.',
+            'Tag academic papers. Reply with strict JSON {"tags":[{"name":string,"kind":"field"|"topic"|"method"}]}. 3-6 concise lowercase tags. No prose. ' +
+            UNTRUSTED_DATA_NOTE,
         },
         {
           role: "user",
-          content: `Title: ${input.title}\nAbstract: ${input.abstract ?? ""}\nExcerpt: ${input.sample}`,
+          content: `Title: ${input.title}\n${fence(`Abstract: ${input.abstract ?? ""}\nExcerpt: ${input.sample}`)}`,
         },
       ],
     });
